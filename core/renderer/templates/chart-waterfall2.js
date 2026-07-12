@@ -66,7 +66,7 @@ function render(ast, config) {
       fullSeries.push({
         value: Math.abs(value),
         itemStyle: {
-          color: i === 0 ? colors[0] : (i === rawData.length - 1 ? colors[1] : '#8b5cf6'),
+          color: '#2563EB',
           borderRadius: [4, 4, 0, 0],
         },
       });
@@ -81,7 +81,7 @@ function render(ast, config) {
         baseSeries.push(running);
         upSeries.push({
           value: delta,
-          itemStyle: { color: colors[2], borderRadius: [4, 4, 0, 0] },
+          itemStyle: { color: '#16A34A', borderRadius: [4, 4, 0, 0] },
         });
         downSeries.push('-');
       } else {
@@ -89,7 +89,7 @@ function render(ast, config) {
         upSeries.push('-');
         downSeries.push({
           value: Math.abs(delta),
-          itemStyle: { color: colors[1], borderRadius: [4, 4, 0, 0] },
+          itemStyle: { color: '#DC2626', borderRadius: [4, 4, 0, 0] },
         });
       }
       running += delta;

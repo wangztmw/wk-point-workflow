@@ -295,6 +295,37 @@ body {
 }
 
 /* ============================================================
+   经典三线表（顶线 3px + 表头下线 2px + 底线 3px，纯黑无竖线）
+   ============================================================ */
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  font-family: var(--font-body);
+  border-top: 3px solid #1a1a1a;
+  border-bottom: 3px solid #1a1a1a;
+}
+.premium-table thead th {
+  background: transparent;
+  color: #1a1a1a;
+  padding: 14px 18px 10px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid #1a1a1a;
+}
+.premium-table tbody tr.even td { background: #f9fafb; }
+.premium-table tbody tr.odd td  { background: #ffffff; }
+.premium-table td {
+  padding: 13px 18px;
+  color: #333;
+  border: none;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ============================================================
    加载遮罩
    ============================================================ */
 .loading-overlay {

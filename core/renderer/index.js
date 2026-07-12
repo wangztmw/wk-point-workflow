@@ -49,6 +49,12 @@ const TEMPLATE_REGISTRY = {
   'chart-waterfall2':'./templates/chart-waterfall2.js',
   'summary':       './templates/summary.html.js',
   'two-column':    './templates/two-column.html.js',
+  'toc':           './templates/toc.html.js',
+  'section':       './templates/section.html.js',
+  'table':         './templates/table.html.js',
+  'ending':        './templates/ending.html.js',
+  'quote':         './templates/quote.html.js',
+  'image-text':    './templates/image-text.html.js',
 };
 
 /**
@@ -241,6 +247,22 @@ function extractAllSlideData(slides, config) {
         left: { title: cleanMD(h3s[0]?.text || '左栏'), items: allItems.slice(0, mid) },
         right: { title: cleanMD(h3s[1]?.text || '右栏'), items: allItems.slice(mid) },
       });
+    } else if (ast.type === 'toc') {
+      const items = ast.content.headings.filter(h => h.level >= 2).map(h => h.text);
+      all.push({ ...base, items });
+    } else if (ast.type === 'section') {
+      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '' });
+    } else if (ast.type === 'table') {
+      const table = ast.content.table;
+      all.push({ ...base, headers: table ? table.headers : [], rows: table ? table.rows : [] });
+    } else if (ast.type === 'ending') {
+      all.push({ ...base, contact: ast.content.paragraphs.map(p => p.text).join('  |  ') });
+    } else if (ast.type === 'quote') {
+      const author = ast.content.headings[1]?.text || (ast.content.paragraphs[0]?.text || '');
+      all.push({ ...base, quote: base.title, author });
+    } else if (ast.type === 'image-text') {
+      const items = []; for (const list of ast.content.lists) for (const item of list.items) items.push(item.text || '');
+      all.push({ ...base, items });
     } else {
       all.push(base);
     }
@@ -272,6 +294,18 @@ ${baseCSS}
 
 /* ===== 主题 CSS 变量 ===== */
 ${customCSS}
+${config.background && config.background.backgroundImage ? `
+  /* 模板背景：非标题页叠加底板 */
+  .slide:not(.slide-title)::before {
+    content: '';
+    position: absolute; inset: 0; z-index: 0;
+    background-image: url(${config.background.backgroundImage});
+    background-size: 960px 540px;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+  .slide:not(.slide-title) > * { position: relative; z-index: 1; }
+` : ''}
 </style>
 </head>
 <body>
@@ -309,6 +343,7 @@ ${slidesHTML}
 var SLIDE_DATA = ${slideDataJSON};
 var SLIDE_CHART_DATA = ${chartDataJSON};
 var CHART_COLORS = ${colorsJSON};
+var BACKGROUND_CONFIG = ${config.background ? JSON.stringify(config.background) : 'null'};
 
 // ============================================================
 // 导出逻辑
@@ -336,6 +371,41 @@ async function exportDomToPptx() {
 }
 
 /** 数据驱动导出：遍历 SLIDE_DATA，按类型走不同渲染 */
+/** 画矢量背景：用 BACKGROUND_CONFIG.elements 里的形状绘制模板底板 */
+function drawBackgroundShapes(slide) {
+  if (!BACKGROUND_CONFIG || !BACKGROUND_CONFIG.elements) return;
+  var els = BACKGROUND_CONFIG.elements;
+  for (var i = 0; i < els.length; i++) {
+    var e = els[i];
+    try {
+      if (e.type === 'rect') {
+        slide.addShape('rect', {
+          x: e.x, y: e.y, w: e.w, h: e.h,
+          fill: e.fill === 'transparent' ? null : { color: e.fill },
+          rectRadius: e.rectRadius || 0,
+          line: e.fill === 'transparent' ? { color: e.stroke || '4472C4', width: e.strokeWidth || 0.5 } : undefined,
+        });
+      } else if (e.type === 'text') {
+        slide.addText(e.text, {
+          x: e.x, y: e.y, w: e.w || 4, h: e.h || 0.4,
+          fontSize: e.fontSize || 12, color: e.color || '333333',
+          bold: e.bold, align: e.align || 'left', fontFace: 'Microsoft YaHei',
+        });
+      } else if (e.type === 'line') {
+        slide.addShape('line', {
+          x: e.x, y: e.y, w: e.w, h: 0,
+          line: { color: e.stroke || '999999', width: e.strokeWidth || 0.5 },
+        });
+      } else if (e.type === 'oval') {
+        slide.addShape('oval', {
+          x: e.x, y: e.y, w: e.w, h: e.h,
+          fill: { color: e.fill || '4472C4' },
+        });
+      }
+    } catch(err) {}
+  }
+}
+
 function buildPptxFromSlideData() {
   var pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'C16x9', width: 10, height: 5.625 });
@@ -345,11 +415,18 @@ function buildPptxFromSlideData() {
     else if (s.type === 'content')    addContentSlidePptx(pptx, s);
     else if (s.type === 'summary')    addSummarySlidePptx(pptx, s);
     else if (s.type === 'two-column') addTwoColumnSlidePptx(pptx, s);
+    else if (s.type === 'toc')        addTocSlidePptx(pptx, s);
+    else if (s.type === 'section')    addSectionSlidePptx(pptx, s);
+    else if (s.type === 'table')      addTableSlidePptx(pptx, s);
+    else if (s.type === 'ending')     addEndingSlidePptx(pptx, s);
+    else if (s.type === 'quote')      addQuoteSlidePptx(pptx, s);
+    else if (s.type === 'image-text') addImageTextSlidePptx(pptx, s);
     else if (s.type === 'chart') {
       if (isWaterfallType(s.chartType)) addWaterfallShapes(pptx, s);
       else addNativeChartSlide(pptx, s);
     }
     else addFallbackSlidePptx(pptx, s);
+    // 背景由各渲染函数内部控制 drawBackgroundShapes
   });
   return pptx;
 }
@@ -381,6 +458,7 @@ async function exportNativeChartsPptx() {
 
 function addWaterfallShapes(pptx, info) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
   var chartX = 0.8, chartW = 8.5;
   var chartY = 1.0, chartH = 4.2;
   var catCount = info.categories.length;
@@ -431,28 +509,27 @@ function addWaterfallShapes(pptx, info) {
       var startVal = Math.abs(val);
       barBottomY = yPos(startVal);
       barH = toY(startVal);
-      barColor = '4472C4';
+      barColor = '2563EB';
       runningTotal = val;
     } else if (isLast) {
       barBottomY = yPos(val);
       barH = toY(val);
-      barColor = 'ED7D31';
+      barColor = '2563EB';
     } else if (isSub) {
-      // ★ 中间合计柱：全高落地，重置累计
       barBottomY = yPos(val);
       barH = toY(val);
-      barColor = '8B5CF6';  // 紫色
+      barColor = '2563EB';
       runningTotal = val;
     } else {
       var delta = val;
       if (delta >= 0) {
         barBottomY = yPos(runningTotal + delta);
         barH = toY(delta);
-        barColor = '70AD47';
+        barColor = '16A34A';
       } else {
         barBottomY = yPos(runningTotal);
         barH = toY(Math.abs(delta));
-        barColor = 'ED7D31';
+        barColor = 'DC2626';
       }
       runningTotal += delta;
     }
@@ -534,6 +611,7 @@ function addWaterfallShapes(pptx, info) {
 /** 添加原生图表幻灯片 */
 function addNativeChartSlide(pptx, info) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
 
   // 标题
   if (info.title) {
@@ -599,6 +677,7 @@ function addTitleSlidePptx(pptx, s) {
 
 function addContentSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
   var y = 0.4;
   if (s.title) {
     slide.addText(s.title, { x: 0.6, y: y, w: 8.8, h: 0.5, fontSize: 22, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
@@ -625,6 +704,7 @@ function addContentSlidePptx(pptx, s) {
 
 function addSummarySlidePptx(pptx, s) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
   if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 22, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
   if (!s.cards || s.cards.length === 0) return;
   var cols = s.cards.length <= 2 ? 2 : 3;
@@ -650,6 +730,7 @@ function addSummarySlidePptx(pptx, s) {
 
 function addTwoColumnSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
   if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 20, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
   function renderCol(col, cx, color) {
     slide.addShape('rect', { x: cx, y: 0.95, w: 4.2, h: 3.8, fill: { color: 'F5F7FF' }, rectRadius: 0.06 });
@@ -669,7 +750,96 @@ function addTwoColumnSlidePptx(pptx, s) {
 
 function addFallbackSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
   if (s.title) slide.addText(s.title, { x: 0.5, y: 2.0, w: 9, h: 1.0, fontSize: 24, bold: true, color: '333333', align: 'center', fontFace: 'Microsoft YaHei' });
+}
+
+function addTocSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
+  slide.addShape('rect', { x: 0.5, y: 0.9, w: 0.8, h: 0.05, fill: { color: '667eea' } });
+  var iy = 1.3;
+  (s.items || []).forEach(function(item, i) {
+    slide.addText((i+1) + '.  ' + item, { x: 0.8, y: iy, w: 8.5, h: 0.38, fontSize: 16, color: '444444', fontFace: 'Microsoft YaHei' });
+    iy += 0.4;
+  });
+}
+
+function addSectionSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  slide.background = { fill: '1a1a2e' };
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 2.0, w: 9, h: 1.0, fontSize: 36, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Microsoft YaHei' });
+  if (s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: 3.0, w: 9, h: 0.5, fontSize: 16, color: 'CCCCDD', align: 'center', fontFace: 'Microsoft YaHei' });
+  slide.addShape('rect', { x: 4.3, y: 3.6, w: 1.4, h: 0.04, fill: { color: '667eea' } });
+}
+
+function addTableSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  if (!s.headers || !s.rows) return;
+
+  // border 数组格式: [上, 右, 下, 左]
+  var TK = { pt: 3, color: '1a1a1a', type: 'solid' };
+  var HD = { pt: 2, color: '1a1a1a', type: 'solid' };
+  var N = { type: 'none' };
+
+  var nCols = s.headers.length;
+  var rows = [s.headers.map(function(h) {
+    return { text: h, options: {
+      bold: true, fontSize: 13, color: '1a1a1a', align: 'center', fontFace: 'Microsoft YaHei',
+      border: [TK, N, HD, N],
+    }};
+  })];
+
+  s.rows.forEach(function(row, i) {
+    var isLast = (i === s.rows.length - 1);
+    rows.push(row.map(function(c, ci) {
+      var isNum = ci > 0 && !isNaN(parseFloat(c));
+      return { text: c, options: {
+        fill: { color: i%2===0 ? 'F9FAFB' : 'FFFFFF' },
+        align: 'center',
+        fontFace: isNum ? 'Courier New' : 'Microsoft YaHei',
+        fontSize: 12, color: '333333',
+        border: isLast ? [N, N, TK, N] : [N, N, N, N],
+      }};
+    }));
+  });
+
+  slide.addTable(rows, {
+    x: 0.5, y: 1.1, w: 9.0, fontSize: 12, rowH: 0.42,
+    border: { type: 'none' },
+    colW: s.headers.map(function(_, ci) { return ci === 0 ? 2.2 : (9.0 - 2.2) / (nCols - 1); }),
+  });
+}
+
+function addEndingSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  slide.background = { fill: '1a1a2e' };
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 2.0, w: 9, h: 1.2, fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Microsoft YaHei' });
+  if (s.contact) slide.addText(s.contact, { x: 1, y: 3.4, w: 8, h: 0.4, fontSize: 13, color: 'AAAAAA', align: 'center', fontFace: 'Microsoft YaHei' });
+}
+
+function addQuoteSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.quote) slide.addText('" ' + s.quote + ' "', { x: 0.8, y: 1.5, w: 8.4, h: 1.5, fontSize: 24, italic: true, color: '333333', align: 'center', fontFace: 'Microsoft YaHei' });
+  if (s.author) slide.addText('— ' + s.author, { x: 2, y: 3.2, w: 6, h: 0.5, fontSize: 14, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
+}
+
+function addImageTextSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 5.2, y: 0.3, w: 4.5, h: 0.5, fontSize: 20, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
+  if (s.items) {
+    var iy = 1.0;
+    s.items.forEach(function(item) {
+      if (iy > 4.8) return;
+      slide.addText('▸ ' + item, { x: 5.2, y: iy, w: 4.3, h: 0.32, fontSize: 12, color: '444444', fontFace: 'Microsoft YaHei' });
+      iy += 0.3;
+    });
+  }
 }
 
 /** 非图表页：文本提取（旧版兼容，不再使用） */

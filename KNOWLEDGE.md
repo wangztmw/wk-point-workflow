@@ -192,6 +192,50 @@ function buildPptxFromSlideData() {
 
 ---
 
+## 踩坑记录
+
+### 坑 1：PptxGenJS cell border 只认数组，不认对象
+
+设置 `border: { top: {...}, bottom: {...} }` 对象格式 → PptxGenJS **静默忽略**，走默认全框线。必须用数组 `[上, 右, 下, 左]`。
+
+### 坑 2：addTable 全局 border 未关 → 全框线
+
+`addTable` 不设 `border: { type: 'none' }` → PptxGenJS 给每格画默认边框，单格的 border 设置被覆盖。必须显式关闭全局边框。
+
+### 坑 3：JSON.stringify 静默丢弃 Function
+
+`JSON.stringify({ formatter: function(){} })` → `{}`，函数值被跳过不报错。formatter 和 renderItem 需要拆出来：数据用 JSON 传，函数在脚本里 `JSON.parse` 后手动补回。
+
+### 坑 4：setOption 调用两次 → series 被整体替换
+
+`chart.setOption({ series: [custom] })` 不是追加，是把之前的柱状系列全部替换。所有系列必须在同一次 `setOption` 中传入。
+
+### 坑 5：模板字符串里的 `\` 转义链
+
+Node.js 模板字符串（反引号）先处理 `\\` → `\`，输出的 HTML 里 `/\w+/` 变成 `/w+/`（`\` 丢了），浏览器 JS 解析失败。涉及多层转义时，用 `indexOf` + `substring` 代替正则。
+
+### 坑 6：背景绘制顺序 → 盖住内容
+
+PptxGenJS 后画的在上面。`drawBackgroundShapes` 放在内容**之后**调用 → 背景盖住内容。必须放在 `addSlide` 之后、`addText` 之前。
+
+### 坑 7：SVG 全幅白色底板被提取为背景形状
+
+SVG 的 `<rect width="960" height="540" fill="#f8f9fc"/>` 是画布底色，不应作为装饰元素。过滤规则：宽>900 且高>500 且颜色以 `#f` 开头的 rect 跳过。
+
+### 坑 8：Markdown 粗体语法残留
+
+`extractAllSlideData` 取 `item.text` 时包含 `**粗体**` 星号 → 导出的 PPTX 文字里带星号。需要用 `toRuns()` 把 inlineMarkup 转为 `[{text, options:{bold:true}}]` 富文本数组。
+
+### 坑 9：渐变色的 fallback 颜色太亮
+
+SVG 的 `fill="url(#g1)"` 无法解析 → `cleanColor` fallback 用 `4472C4`（亮蓝），实际应为 `0f3460`（深蓝）。遇到 `url(#...)` 时返回深色默认值。
+
+### 坑 10：HTML 表格 `::before`/`::after` 伪元素不可靠
+
+`thead::before { display: table-row; }` 在不同浏览器行为不一致，顶线/底线只显示在第一列宽度。改用 `table { border-top/bottom }` 原生 CSS border。
+
+---
+
 ## 经验记录
 
 ---

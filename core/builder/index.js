@@ -60,10 +60,14 @@ async function main() {
   let openBrowser = false;
   let watchMode = false;
   let themePreset = null;
+  let styleguide = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--all') {
       buildAll = true;
+    } else if (args[i] === '--styleguide') {
+      styleguide = true;
+      if (args[i + 1] && !args[i + 1].startsWith('--')) projectName = args[++i];
     } else if (args[i] === '--watch') {
       watchMode = true;
       if (args[i + 1] && !args[i + 1].startsWith('--')) {
@@ -79,6 +83,12 @@ async function main() {
     } else if (!args[i].startsWith('--')) {
       projectName = args[i];
     }
+  }
+
+  if (styleguide) {
+    await generateStyleguide(projectName, themePreset);
+    if (openBrowser) openInBrowser(projectName);
+    return;
   }
 
   if (buildAll) {
@@ -155,6 +165,46 @@ async function buildProject(name, themePreset) {
     }
   } else {
     console.log(`   ⚙  使用默认配置（无 config.json）`);
+  }
+
+  // 2b. 背景模板：优先 bg.json，其次自动检测图片/PPT模板
+  const bgPath = path.join(projectDir, 'bg.json');
+  if (fs.existsSync(bgPath)) {
+    try {
+      config.background = JSON.parse(fs.readFileSync(bgPath, 'utf-8'));
+      console.log(`   🖼  加载 bg.json（背景模板）`);
+    } catch (err) { console.warn(`   ⚠  bg.json 解析失败`); }
+  } else {
+    // 自动检测 assets/ 或项目根目录里的背景图/模板
+    const imgCandidates = ['background.png', 'background.jpg', 'background.jpeg', 'background.svg', 'template.png', 'template.jpg', 'template.jpeg', 'template.svg', 'bg.png', 'bg.jpg', 'bg.svg', 'template.pptx'];
+    let foundImg = null;
+    const searchDirs = [path.join(projectDir, 'assets'), projectDir];
+    for (const dir of searchDirs) {
+      if (!fs.existsSync(dir)) continue;
+      for (const name of imgCandidates) {
+        const p = path.join(dir, name);
+        if (fs.existsSync(p)) { foundImg = p; break; }
+      }
+      if (foundImg) break;
+    }
+    if (foundImg) {
+      try {
+        const { extract } = require('../styler/extract-bg');
+        config.background = await extract(foundImg);
+        // SVG 额外转为矢量图形
+        var ext = path.extname(foundImg).toLowerCase();
+        if (ext === '.svg') {
+          var { parse: parseSVG } = require('../styler/to-shapes');
+          var svgText = fs.readFileSync(foundImg, 'utf-8');
+          var shapeData = parseSVG(svgText);
+          config.background.elements = shapeData.elements;
+          config.background.safeArea = shapeData.safeArea;
+          console.log(`   🧩 SVG → ${shapeData.elements.length} 个矢量图形`);
+        }
+        fs.writeFileSync(bgPath, JSON.stringify(config.background, null, 2), 'utf-8');
+        console.log(`   🖼  检测到 ${path.basename(foundImg)} → 自动提取背景 → 缓存 bg.json`);
+      } catch (err) { console.warn(`   ⚠  背景提取失败: ${err.message}`); }
+    }
   }
 
   // 3. 应用主题预设
@@ -238,6 +288,44 @@ function deepMerge(target, source) {
 // ============================================================
 // 执行
 // ============================================================
+
+async function generateStyleguide(name, themePreset) {
+  const { render } = require('../renderer');
+  // 为每种模板类型构造示例 AST
+  const samples = [
+    { type:'title', props:{title:'封面页示例'}, content:{headings:[{level:1,text:'样式指南'},{level:2,text:'全部模板预览'}],paragraphs:[{text:'构建日期: '+new Date().toLocaleDateString()}],lists:[],table:null,raw:''} },
+    { type:'toc', props:{title:'目录'}, content:{headings:[{level:2,text:'目录'},{level:2,text:'封面'},{level:2,text:'过渡页'},{level:2,text:'内容页'},{level:2,text:'图表页'},{level:2,text:'总结页'},{level:2,text:'结束页'}],paragraphs:[],lists:[],table:null,raw:''} },
+    { type:'section', props:{title:'第一部分'}, content:{headings:[{level:1,text:'第一部分'},{level:2,text:'章节副标题'}],paragraphs:[],lists:[],table:null,raw:''} },
+    { type:'content', props:{title:'内容页'}, content:{headings:[{level:2,text:'关键要点'}],paragraphs:[],lists:[{ordered:false,items:[{text:'第一项要点说明',inlineMarkup:[{type:'text',value:'第一项要点说明'}]},{text:'第二项要点说明 **粗体强调**',inlineMarkup:[{type:'text',value:'第二项要点说明 '},{type:'bold',content:[{type:'text',value:'粗体强调'}]}]}]}],table:null,raw:''} },
+    { type:'summary', props:{title:'总结页'}, content:{headings:[{level:2,text:'核心结论'},{level:3,text:'✅ 达成'},{level:3,text:'⚠ 注意'},{level:3,text:'🎯 计划'}],lists:[{ordered:false,items:[{text:'成果一',inlineMarkup:[{type:'text',value:'成果一'}]}]},{ordered:false,items:[{text:'问题一',inlineMarkup:[{type:'text',value:'问题一'}]}]},{ordered:false,items:[{text:'行动一',inlineMarkup:[{type:'text',value:'行动一'}]}]}],paragraphs:[],table:null,raw:''} },
+    { type:'two-column', props:{title:'两栏布局'}, content:{headings:[{level:2,text:'对比分析'},{level:3,text:'优势'},{level:3,text:'挑战'}],lists:[{ordered:false,items:[{text:'优势项一',inlineMarkup:[{type:'text',value:'优势项一'}]},{text:'优势项二',inlineMarkup:[{type:'text',value:'优势项二'}]},{text:'挑战项一',inlineMarkup:[{type:'text',value:'挑战项一'}]},{text:'挑战项二',inlineMarkup:[{type:'text',value:'挑战项二'}]}]}],paragraphs:[],table:null,raw:''} },
+    { type:'chart', props:{chartType:'bar',title:'柱状图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['季度','产品A','产品B'],rows:[['Q1','120','85'],['Q2','145','102'],['Q3','168','125'],['Q4','192','148']]},raw:''} },
+    { type:'chart', props:{chartType:'pie',title:'饼图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['渠道','占比'],rows:[['搜索','40'],['社交','25'],['直接','18'],['邮件','12'],['其他','5']]},raw:''} },
+    { type:'chart', props:{chartType:'line',title:'折线图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['月份','DAU'],rows:[['1月','120'],['2月','145'],['3月','168'],['4月','192'],['5月','220'],['6月','255']]},raw:''} },
+    { type:'chart', props:{chartType:'radar',title:'雷达图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['维度','产品A','产品B'],rows:[['性能','92','75'],['稳定','88','90'],['易用','78','92'],['安全','95','70'],['扩展','85','80']]},raw:''} },
+    { type:'chart', props:{chartType:'pareto',title:'帕累托图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['原因','次数'],rows:[['操作失误','85'],['设计缺陷','52'],['硬件故障','38'],['环境因素','18'],['其他','7']]},raw:''} },
+    { type:'chart', props:{chartType:'compare',title:'对比图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['指标','2023','2024'],rows:[['营收','580','680'],['用户','12.8','15.2'],['客单价','456','520']]},raw:''} },
+    { type:'chart', props:{chartType:'waterfall',title:'瀑布图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['阶段','金额'],rows:[['起始','500'],['+A','+120'],['-B','-80'],['+C','+60'],['结束','600']]},raw:''} },
+    { type:'chart', props:{chartType:'waterfall2',title:'分段瀑布图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['阶段','金额'],rows:[['起始','500'],['+A','+150'],['-B','-60'],['合计','590'],['+C','+80'],['结束','670']]},raw:''} },
+    { type:'table', props:{title:'数据表格'}, content:{headings:[{level:2,text:'季度数据'}],paragraphs:[],lists:[],table:{headers:['季度','营收','利润','利润率'],rows:[['Q1','580','120','20.7%'],['Q2','680','145','21.3%'],['Q3','750','168','22.4%'],['Q4','820','192','23.4%']]},raw:''} },
+    { type:'image-text', props:{title:'图文混排'}, content:{headings:[{level:2,text:'产品展示'}],paragraphs:[{text:'产品描述文字'}],lists:[{ordered:false,items:[{text:'特性一',inlineMarkup:[{type:'text',value:'特性一'}]},{text:'特性二',inlineMarkup:[{type:'text',value:'特性二'}]}]}],images:[{alt:'示例图片',src:''}],table:null,raw:''} },
+    { type:'quote', props:{title:'引用页'}, content:{headings:[{level:1,text:'千里之行，始于足下'},{level:2,text:'老子'}],paragraphs:[],lists:[],table:null,raw:''} },
+    { type:'ending', props:{title:'结束页'}, content:{headings:[{level:1,text:'谢谢'}],paragraphs:[{text:'contact@company.com'}],lists:[],table:null,raw:''} },
+  ];
+
+  // 加 index
+  samples.forEach((s, i) => { s.index = i; });
+  // 应用主题
+  let config = { title: '样式指南', chartColors: ['#667eea','#e94560','#2ecc71','#f39c12','#95a5a6'] };
+  if (themePreset && THEME_PRESETS[themePreset]) config = deepMerge(config, THEME_PRESETS[themePreset]);
+  const html = render(samples, config);
+  const outDir = path.join(PROJECTS_DIR, name, 'output');
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, 'styleguide.html');
+  fs.writeFileSync(outPath, html, 'utf-8');
+  console.log(`\n📐 样式指南已生成: ${outPath}`);
+  console.log(`   共 ${samples.length} 种模板类型\n`);
+}
 
 main().catch(err => {
   console.error('❌ 构建失败:', err.message);

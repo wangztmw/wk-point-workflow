@@ -58,7 +58,7 @@ function render(ast, config) {
       // 第一个柱子：起始值，从 0 开始的全高柱子
       const v = Math.abs(value);
       baseSeries.push(0);
-      increaseSeries.push({ value: v, itemStyle: { color: colors[0], borderRadius: [4, 4, 0, 0] } });
+      increaseSeries.push({ value: v, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
       decreaseSeries.push(0);
       runningTotal = value; // 可能是正或负
       linePoints.push(runningTotal);
@@ -66,7 +66,7 @@ function render(ast, config) {
       // 最后一个柱子：最终结果，从 0 开始的全高柱子
       const finalValue = value; // 实际最终值
       baseSeries.push(0);
-      increaseSeries.push({ value: finalValue, itemStyle: { color: colors[1], borderRadius: [4, 4, 0, 0] } });
+      increaseSeries.push({ value: finalValue, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
       decreaseSeries.push(0);
       linePoints.push(finalValue);
     } else {
@@ -75,13 +75,13 @@ function render(ast, config) {
       if (delta >= 0) {
         // 正增长：底座 = runningTotal, 增高条 = delta
         baseSeries.push(runningTotal);
-        increaseSeries.push({ value: delta, itemStyle: { color: colors[2], borderRadius: [4, 4, 0, 0] } });
+        increaseSeries.push({ value: delta, itemStyle: { color: '#16A34A', borderRadius: [4, 4, 0, 0] } });
         decreaseSeries.push(0);
       } else {
         // 负增长：底座 = runningTotal + delta (新累计值), 降条 = |delta|
         baseSeries.push(runningTotal + delta);
         increaseSeries.push(0);
-        decreaseSeries.push({ value: Math.abs(delta), itemStyle: { color: colors[1], borderRadius: [4, 4, 0, 0] } });
+        decreaseSeries.push({ value: Math.abs(delta), itemStyle: { color: '#DC2626', borderRadius: [4, 4, 0, 0] } });
       }
       runningTotal += delta;
       linePoints.push(runningTotal);
