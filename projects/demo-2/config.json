@@ -1,0 +1,20 @@
+{
+  "title": "产品能力评估报告",
+  "layout": "16x9",
+  "width": 960,
+  "height": 540,
+  "theme": {
+    "primary": "#0ea5e9",
+    "accent": "#f97316",
+    "success": "#10b981",
+    "warning": "#eab308",
+    "bg": "#f0f9ff",
+    "text": "#0c4a6e",
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+  },
+  "chartColors": ["#0ea5e9", "#f97316", "#10b981", "#eab308", "#6366f1"],
+  "export": {
+    "svgAsVector": true,
+    "autoEmbedFonts": true
+  }
+}

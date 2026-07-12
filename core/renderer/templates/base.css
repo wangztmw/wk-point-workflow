@@ -1,0 +1,325 @@
+/**
+ * base.css — 幻灯片通用样式
+ * 所有模板共享的基础样式。
+ * 幻灯片尺寸：960px × 540px（16:9 标准）
+ */
+
+/* ============================================================
+   CSS 变量（可被 config.json 覆盖）
+   ============================================================ */
+:root {
+  --slide-width: 960px;
+  --slide-height: 540px;
+  --color-primary: #667eea;
+  --color-accent: #e94560;
+  --color-success: #2ecc71;
+  --color-warning: #f39c12;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f5f7ff;
+  --color-text: #222222;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+  --color-border: #e5e7eb;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-heading: "PingFang SC", "Microsoft YaHei", sans-serif;
+  --shadow-slide: 0 8px 32px rgba(0,0,0,0.15);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+}
+
+/* ============================================================
+   全局重置
+   ============================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: #1a1a2e;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   工具栏
+   ============================================================ */
+.toolbar {
+  position: sticky; top: 0; z-index: 100;
+  background: #16213e;
+  border-radius: var(--radius-md);
+  padding: 14px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 1000px;
+}
+.toolbar h1 {
+  font-size: 17px;
+  margin-right: 12px;
+  white-space: nowrap;
+  color: #e0e0ff;
+}
+.toolbar .btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.toolbar .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.toolbar .btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+.toolbar .btn-secondary {
+  background: #0f3460;
+  color: #e0e0ff;
+  border: 1px solid #1a508b;
+}
+.toolbar .btn-success {
+  background: var(--color-success);
+  color: #fff;
+}
+.toolbar .status {
+  font-size: 12px;
+  color: #8899aa;
+  margin-left: 6px;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   幻灯片容器
+   ============================================================ */
+.slides-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* ============================================================
+   单页幻灯片
+   ============================================================ */
+.slide {
+  width: var(--slide-width);
+  height: var(--slide-height);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-slide);
+  background: var(--color-bg);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+@media (max-width: 1000px) {
+  .slide {
+    width: 90vw;
+    height: calc(90vw * 0.5625);
+  }
+}
+
+/* ============================================================
+   通用幻灯片内部元素
+   ============================================================ */
+.slide .section-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  font-family: var(--font-heading);
+}
+.slide .divider {
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary), #764ba2);
+  border-radius: 2px;
+  margin-bottom: 24px;
+}
+
+/* 列表 */
+.slide .slide-list {
+  list-style: none;
+  margin-bottom: 16px;
+}
+.slide .slide-list li {
+  font-size: 17px;
+  line-height: 1.9;
+  color: #444;
+  padding: 4px 0 4px 26px;
+  position: relative;
+}
+.slide .slide-list li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: bold;
+  font-size: 14px;
+}
+.slide .slide-list ol {
+  list-style: decimal;
+  padding-left: 28px;
+}
+.slide .slide-list ol li {
+  padding-left: 4px;
+}
+.slide .slide-list ol li::before {
+  content: none;
+}
+
+/* 段落 */
+.slide .slide-para {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 12px;
+}
+
+/* 次级标题 */
+.slide .slide-subheading {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 16px 0 8px;
+}
+
+/* 标题页标签 */
+.slide .badge-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.slide .badge-tag {
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ============================================================
+   总结/卡片页
+   ============================================================ */
+.slide .card-grid { margin-top: 8px; }
+.slide .summary-card {
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.slide .summary-card .card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+.slide .summary-card .card-list {
+  list-style: none;
+  flex: 1;
+}
+.slide .summary-card .card-list li {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #555;
+  padding-left: 16px;
+  position: relative;
+}
+.slide .summary-card .card-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+}
+.slide .summary-card .card-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   两栏布局
+   ============================================================ */
+.slide .two-col-row {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+.slide .column-card {
+  background: var(--color-bg-alt);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 20px 24px;
+  flex: 1;
+}
+.slide .column-card .col-list {
+  list-style: none;
+}
+.slide .column-card .col-list li {
+  font-size: 15px;
+  line-height: 2.0;
+  color: #444;
+  padding-left: 20px;
+  position: relative;
+}
+.slide .column-card .col-list li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* ============================================================
+   加载遮罩
+   ============================================================ */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0,0,0,0.6);
+  justify-content: center;
+  align-items: center;
+}
+.loading-overlay.active { display: flex; }
+.loading-box {
+  background: #16213e;
+  border-radius: 16px;
+  padding: 32px 48px;
+  text-align: center;
+  color: #fff;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,22 @@
+{
+  "name": "md-html-ppt-slide",
+  "version": "1.0.0",
+  "description": "Markdown → HTML → PPT 三层幻灯片生成系统",
+  "private": true,
+  "scripts": {
+    "build": "node core/builder/index.js",
+    "build:all": "node core/builder/index.js --all",
+    "dev": "node core/builder/index.js --watch"
+  },
+  "keywords": [
+    "markdown",
+    "html",
+    "pptx",
+    "slide",
+    "presentation"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

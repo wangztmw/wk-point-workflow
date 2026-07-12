@@ -1,0 +1,21 @@
+{
+  "name": "html-to-editable-ppt-demo",
+  "version": "1.0.0",
+  "description": "演示：HTML 幻灯片 → 可编辑 PowerPoint（含图表/SVG 矢量图形）",
+  "private": true,
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx live-server --port=3000"
+  },
+  "keywords": [
+    "html-to-pptx",
+    "dom-to-pptx",
+    "powerpoint",
+    "slide",
+    "editable"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

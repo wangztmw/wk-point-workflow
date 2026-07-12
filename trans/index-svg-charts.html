@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG 图表版 — PPT 中图表完全可编辑</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1a1a2e; color: #eee;
+    display: flex; flex-direction: column; align-items: center; padding: 20px;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #16213e; border-radius: 12px;
+    padding: 16px 24px; margin-bottom: 24px;
+    display: flex; gap: 12px; align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    flex-wrap: wrap; justify-content: center;
+  }
+  .toolbar h1 { font-size: 18px; margin-right: 16px; white-space: nowrap; }
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .btn-primary { background: #e94560; color: #fff; }
+  .btn-secondary { background: #0f3460; color: #e0e0ff; border: 1px solid #1a508b; }
+  .status { font-size: 13px; color: #8899aa; margin-left: 8px; }
+
+  .slides-wrapper {
+    display: flex; flex-direction: column; gap: 32px;
+    width: 100%; max-width: 1000px;
+  }
+  .slide {
+    width: 960px; height: 540px;
+    position: relative; overflow: hidden;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    background: #fff; color: #222;
+    flex-shrink: 0;
+  }
+  @media (max-width: 1000px) {
+    .slide { width: 90vw; height: calc(90vw * 0.5625); }
+  }
+
+  /* Slide 1: Title */
+  .slide-1 {
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 50%, #e94560 100%);
+    color: #fff;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .slide-1 h2 { font-size: 44px; font-weight: 800; margin-bottom: 12px; text-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+  .slide-1 p { font-size: 20px; opacity: 0.85; }
+
+  /* Slide 2-5: charts */
+  .slide-chart { background: #fff; display: flex; }
+  .slide-chart .chart-area { flex: 1; position: relative; }
+  .slide-chart .info-tag {
+    position: absolute; top: 12px; right: 16px;
+    background: #2ecc71; color: #fff; font-size: 12px;
+    padding: 4px 12px; border-radius: 10px; z-index: 5;
+    font-weight: 600;
+  }
+
+  /* Slide 6: mixed SVG + text */
+  .slide-mixed { background: #f8f9ff; padding: 40px 50px; }
+  .slide-mixed h3 { font-size: 28px; font-weight: 700; color: #333; margin-bottom: 20px; }
+  .slide-mixed .svg-row { display: flex; gap: 30px; align-items: center; }
+  .slide-mixed .legend-box { flex: 1; }
+  .slide-mixed .legend-box .item {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 0; font-size: 16px; color: #444;
+  }
+  .slide-mixed .legend-box .swatch {
+    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+  }
+  .slide-mixed .svg-demo { flex: 1; display: flex; justify-content: center; }
+
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.6); justify-content: center; align-items: center;
+  }
+  .loading-overlay.active { display: flex; }
+  .loading-box {
+    background: #16213e; border-radius: 16px; padding: 32px 48px;
+    text-align: center; color: #fff;
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #e94560; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>📊 SVG 图表版 — 图表导出后在 PPT 中完全可编辑</h1>
+  <button class="btn btn-primary" onclick="exportPPT()">⬇ 导出为可编辑 PPTX</button>
+  <span class="status" id="status"></span>
+</div>
+
+<div class="slides-wrapper" id="slides-container">
+
+  <!-- Slide 1: Title -->
+  <div class="slide slide-1" id="s1">
+    <h2>SVG 图表 → 可编辑 PPT</h2>
+    <p>ECharts SVG 渲染器 + dom-to-pptx svgAsVector</p>
+  </div>
+
+  <!-- Slide 2: Bar chart (ECharts SVG renderer) -->
+  <div class="slide slide-chart" id="s2">
+    <div class="chart-area" id="echart-bar" style="width:100%;height:100%;"></div>
+    <div class="info-tag">✅ SVG 矢量 → PPT 可编辑</div>
+  </div>
+
+  <!-- Slide 3: Line chart (ECharts SVG renderer) -->
+  <div class="slide slide-chart" id="s3">
+    <div class="chart-area" id="echart-line" style="width:100%;height:100%;"></div>
+    <div class="info-tag">✅ SVG 矢量 → PPT 可编辑</div>
+  </div>
+
+  <!-- Slide 4: Pie chart (ECharts SVG renderer) -->
+  <div class="slide slide-chart" id="s4">
+    <div class="chart-area" id="echart-pie" style="width:100%;height:100%;"></div>
+    <div class="info-tag">✅ SVG 矢量 → PPT 可编辑</div>
+  </div>
+
+  <!-- Slide 5: Radar chart (ECharts SVG renderer) -->
+  <div class="slide slide-chart" id="s5">
+    <div class="chart-area" id="echart-radar" style="width:100%;height:100%;"></div>
+    <div class="info-tag">✅ SVG 矢量 → PPT 可编辑</div>
+  </div>
+
+  <!-- Slide 6: Native SVG + text summary -->
+  <div class="slide slide-mixed" id="s6">
+    <h3>📋 导出后在 PPT 中的操作</h3>
+    <div class="svg-row">
+      <div class="legend-box">
+        <div class="item"><span class="swatch" style="background:#667eea"></span> 右键 SVG → "转换为形状"</div>
+        <div class="item"><span class="swatch" style="background:#e94560"></span> 取消组合 → 逐元素编辑</div>
+        <div class="item"><span class="swatch" style="background:#2ecc71"></span> 修改颜色/大小/位置</div>
+        <div class="item"><span class="swatch" style="background:#f39c12"></span> 图表数据在 PPT 中可调整</div>
+      </div>
+      <div class="svg-demo">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="80" fill="none" stroke="#667eea" stroke-width="3"/>
+          <circle cx="100" cy="100" r="55" fill="none" stroke="#e94560" stroke-width="3"/>
+          <circle cx="100" cy="100" r="30" fill="#2ecc71" opacity="0.8"/>
+          <text x="100" y="106" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold">PPT</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p>正在生成 PPTX（含 SVG 矢量图表）...</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/dom-to-pptx@1.1.5/dist/dom-to-pptx.bundle.js"></script>
+<script>
+// ============================================================
+// ECharts SVG 渲染器初始化
+// ============================================================
+
+// 通用 ECharts 初始化（强制 SVG 渲染）
+function initSvgChart(domId, option) {
+  const dom = document.getElementById(domId);
+  // 关键：renderer: 'svg' 使图表以 SVG 形式渲染到 DOM
+  const chart = echarts.init(dom, null, { renderer: 'svg' });
+  chart.setOption(option);
+  return chart;
+}
+
+// Slide 2: 柱状图
+initSvgChart('echart-bar', {
+  title: { text: '季度销售对比', left: 'center', top: 16, textStyle: { fontSize: 22, color: '#333' } },
+  tooltip: {},
+  legend: { bottom: 10, textStyle: { fontSize: 13 } },
+  grid: { left: '8%', right: '8%', top: '18%', bottom: '16%' },
+  xAxis: { type: 'category', data: ['Q1', 'Q2', 'Q3', 'Q4'], axisLabel: { fontSize: 14 } },
+  yAxis: { type: 'value', name: '万元', axisLabel: { fontSize: 12 } },
+  series: [
+    { name: '线上', type: 'bar', data: [320, 402, 458, 520], color: '#667eea', barWidth: '30%' },
+    { name: '线下', type: 'bar', data: [280, 345, 398, 445], color: '#e94560', barWidth: '30%' },
+    { name: '渠道', type: 'bar', data: [150, 198, 230, 278], color: '#2ecc71', barWidth: '30%' },
+  ]
+});
+
+// Slide 3: 折线图
+initSvgChart('echart-line', {
+  title: { text: '全年趋势分析', left: 'center', top: 16, textStyle: { fontSize: 22, color: '#333' } },
+  tooltip: { trigger: 'axis' },
+  legend: { bottom: 10, textStyle: { fontSize: 13 } },
+  grid: { left: '8%', right: '8%', top: '18%', bottom: '16%' },
+  xAxis: { type: 'category', data: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'] },
+  yAxis: { type: 'value', axisLabel: { fontSize: 12 } },
+  series: [
+    { name: 'DAU', type: 'line', data: [120,132,145,162,178,195,210,228,240,255,268,280],
+      smooth: true, lineStyle: { width: 3, color: '#667eea' }, itemStyle: { color: '#667eea' } },
+    { name: 'MAU', type: 'line', data: [800,820,850,880,910,950,980,1020,1050,1080,1120,1150],
+      smooth: true, lineStyle: { width: 3, color: '#e94560' }, itemStyle: { color: '#e94560' } },
+  ]
+});
+
+// Slide 4: 饼图
+initSvgChart('echart-pie', {
+  title: { text: '收入构成分析', left: 'center', top: 16, textStyle: { fontSize: 22, color: '#333' } },
+  tooltip: { trigger: 'item', formatter: '{b}: {c}万 ({d}%)' },
+  legend: { bottom: 10, textStyle: { fontSize: 13 } },
+  series: [{
+    type: 'pie', radius: ['35%', '65%'], center: ['50%', '48%'],
+    data: [
+      { value: 450, name: 'SaaS 订阅' },
+      { value: 320, name: '技术服务' },
+      { value: 180, name: '培训咨询' },
+      { value: 120, name: '硬件销售' },
+      { value: 80, name: '其他' },
+    ],
+    label: { fontSize: 12 },
+    itemStyle: {
+      color: params => ['#667eea','#e94560','#2ecc71','#f39c12','#95a5a6'][params.dataIndex]
+    }
+  }]
+});
+
+// Slide 5: 雷达图
+initSvgChart('echart-radar', {
+  title: { text: '产品能力评估', left: 'center', top: 16, textStyle: { fontSize: 22, color: '#333' } },
+  legend: { bottom: 10, textStyle: { fontSize: 13 } },
+  radar: {
+    center: ['50%', '50%'],
+    radius: '60%',
+    indicator: [
+      { name: '性能', max: 100 }, { name: '稳定性', max: 100 },
+      { name: '易用性', max: 100 }, { name: '安全性', max: 100 },
+      { name: '扩展性', max: 100 }, { name: '文档', max: 100 },
+    ]
+  },
+  series: [
+    { name: '产品 A', type: 'radar',
+      data: [{ value: [92, 88, 78, 95, 85, 72], name: '产品 A' }],
+      lineStyle: { color: '#667eea', width: 2 }, areaStyle: { color: 'rgba(102,126,234,0.2)' } },
+    { name: '产品 B', type: 'radar',
+      data: [{ value: [75, 90, 92, 70, 80, 88], name: '产品 B' }],
+      lineStyle: { color: '#e94560', width: 2 }, areaStyle: { color: 'rgba(233,69,96,0.2)' } },
+  ]
+});
+
+// ============================================================
+// 导出
+// ============================================================
+const $s = id => document.getElementById(id);
+
+async function exportPPT() {
+  try {
+    $s('status').textContent = '⏳ 正在生成...';
+    document.getElementById('loading').classList.add('active');
+
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    await domToPptx.exportToPptx(slides, {
+      fileName: 'svg-charts-editable.pptx',
+      svgAsVector: true,
+      autoEmbedFonts: true,
+      layout: 'LAYOUT_16x9',
+    });
+
+    $s('status').textContent = '✅ 导出成功！所有图表以 SVG 矢量嵌入，PPT 中右键 → "转换为形状"即可编辑';
+  } catch (err) {
+    console.error(err);
+    $s('status').textContent = '❌ ' + err.message;
+  } finally {
+    document.getElementById('loading').classList.remove('active');
+  }
+}
+
+console.log('%c✅ SVG 图表版已就绪 %c| %cECharts SVG 渲染 + dom-to-pptx svgAsVector',
+  'font-size:16px;color:#2ecc71;', '', 'color:#888;');
+console.log('%c📌 所有图表以 SVG 矢量形式嵌入 → PPT 中右键"转换为形状"即可逐元素编辑',
+  'color:#f39c12;');
+</script>
+</body>
+</html>
