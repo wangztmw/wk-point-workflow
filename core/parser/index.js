@@ -155,6 +155,7 @@ function parseContent(text) {
     paragraphs: [],
     lists: [],
     table: null,
+    blocks: [],      // ★ 保留原始顺序: [{type:'heading',data:{...}}, {type:'list',data:{...}},...]
     raw: text,
   };
 
@@ -172,10 +173,9 @@ function parseContent(text) {
     // 标题
     const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)/);
     if (headingMatch) {
-      content.headings.push({
-        level: headingMatch[1].length,
-        text: headingMatch[2],
-      });
+      const h = { level: headingMatch[1].length, text: headingMatch[2] };
+      content.headings.push(h);
+      content.blocks.push({ type: 'heading', data: h });
       i++;
       continue;
     }
@@ -184,7 +184,7 @@ function parseContent(text) {
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       content.table = parseTable(lines, i);
       if (content.table) {
-        // 跳过分隔行
+        content.blocks.push({ type: 'table', data: content.table });
         i += 2 + content.table.rows.length;
         continue;
       }
@@ -194,6 +194,7 @@ function parseContent(text) {
     if (trimmed.match(/^[-*]\s+/)) {
       const { list, consumed } = parseUnorderedList(lines, i);
       content.lists.push(list);
+      content.blocks.push({ type: 'list', data: list });
       i += consumed;
       continue;
     }
@@ -202,6 +203,7 @@ function parseContent(text) {
     if (trimmed.match(/^\d+\.\s+/)) {
       const { list, consumed } = parseOrderedList(lines, i);
       content.lists.push(list);
+      content.blocks.push({ type: 'list', data: list });
       i += consumed;
       continue;
     }
@@ -210,10 +212,9 @@ function parseContent(text) {
     const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imageMatch) {
       content.images = content.images || [];
-      content.images.push({
-        alt: imageMatch[1],
-        src: imageMatch[2],
-      });
+      const img = { alt: imageMatch[1], src: imageMatch[2] };
+      content.images.push(img);
+      content.blocks.push({ type: 'image', data: img });
       i++;
       continue;
     }
@@ -222,6 +223,7 @@ function parseContent(text) {
     const { paragraph, consumed } = parseParagraph(lines, i);
     if (paragraph) {
       content.paragraphs.push(paragraph);
+      content.blocks.push({ type: 'paragraph', data: paragraph });
     }
     i += consumed;
 

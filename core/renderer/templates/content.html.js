@@ -11,41 +11,36 @@ function render(ast, config) {
   // 标题：优先用第一个 h2
   const title = content.headings[0]?.text || props.title || '';
 
-  // 构建列表 HTML
+  // ★ 按 Markdown 原始顺序渲染（从 blocks 数组读取）
   let contentHTML = '';
-  for (const list of content.lists) {
-    const tag = list.ordered ? 'ol' : 'ul';
-    const itemsHTML = list.items.map(item =>
-      `<li>${renderInline(item.inlineMarkup)}</li>`
-    ).join('');
-    contentHTML += `<${tag} class="slide-list">${itemsHTML}</${tag}>`;
-  }
-
-  // 段落
-  for (const p of content.paragraphs) {
-    contentHTML += `<p class="slide-para">${renderInline(p.inlineMarkup)}</p>`;
-  }
-
-  // 次级标题（h3+）
-  for (let i = 1; i < content.headings.length; i++) {
-    const h = content.headings[i];
-    contentHTML += `<h${h.level} class="slide-subheading">${escapeHTML(h.text)}</h${h.level}>`;
-  }
-
-  // 图片
-  if (content.images && content.images.length > 0) {
-    for (const img of content.images) {
+  const blocks = content.blocks || [];
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      const h = block.data;
+      if (h.level >= 3) {
+        contentHTML += `<h${h.level} class="slide-subheading">${escapeHTML(h.text)}</h${h.level}>`;
+      }
+    } else if (block.type === 'list') {
+      const list = block.data;
+      const tag = list.ordered ? 'ol' : 'ul';
+      const itemsHTML = list.items.map(item =>
+        `<li>${renderInline(item.inlineMarkup)}</li>`
+      ).join('');
+      contentHTML += `<${tag} class="slide-list">${itemsHTML}</${tag}>`;
+    } else if (block.type === 'paragraph') {
+      const p = block.data;
+      contentHTML += `<p class="slide-para">${renderInline(p.inlineMarkup)}</p>`;
+    } else if (block.type === 'image') {
+      const img = block.data;
       contentHTML += `<div class="slide-image-wrap"><img src="${escapeHTML(img.src)}" alt="${escapeHTML(img.alt || '')}" style="max-width:100%;max-height:350px;border-radius:8px;"/></div>`;
     }
   }
 
   return `
-<div class="slide slide-content" style="background: var(--color-bg); padding: 50px 70px;">
-  ${title ? `<div class="section-title">${escapeHTML(title)}</div>
+<div class="slide slide-content" style="background: var(--color-bg); padding: 48px 70px;">
+  ${title ? `<div class="section-title" style="font-size:24px;font-weight:700;color:#1a1a1a;margin-bottom:10px;">${escapeHTML(title)}</div>
   <div class="divider"></div>` : ''}
-  <div class="content-body">
-    ${contentHTML}
-  </div>
+  <div class="content-body">${contentHTML}</div>
 </div>`;
 }
 

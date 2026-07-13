@@ -48,18 +48,22 @@ function render(ast, config) {
   function buildColumn(colTitle, items, paras, isLeft) {
     const borderColor = isLeft ? 'var(--color-primary)' : 'var(--color-accent)';
     return `
-    <div class="column-card" style="border-left: 4px solid ${borderColor}; flex: 1; padding: 16px 20px; background: var(--color-bg-alt); border-radius: 0 var(--radius-md) var(--radius-md) 0;">
-      <h4 style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 10px;">${escapeHTML(colTitle)}</h4>
-      ${items.length > 0 ? `<ul class="col-list">${items.map(item => `<li>${escapeHTML(item)}</li>`).join('')}</ul>` : ''}
+    <div class="column-card" style="border-left: 4px solid ${borderColor}; flex: 1; padding: 24px 24px; background: var(--color-bg-alt); border-radius: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+      <h4 style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee;">${escapeHTML(colTitle)}</h4>
+      ${items.length > 0 ? `<ul class="col-list">${items.map((item, idx) => `<li><span class="col-num">${String(idx+1).padStart(2,'0')}</span>${escapeHTML(item)}</li>`).join('')}</ul>` : ''}
       ${paras.map(p => `<p style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 6px;">${escapeHTML(p)}</p>`).join('')}
     </div>`;
   }
 
   return `
 <div class="slide slide-two-col" style="background: var(--color-bg); padding: 40px 44px;">
-  ${title ? `<div class="section-title" style="margin-bottom: 16px;">${escapeHTML(title)}</div>` : ''}
-  <div class="two-col-row" style="display: flex; gap: 20px; flex: 1; min-height: 0;">
+  ${title ? `<div style="display:flex;align-items:stretch;gap:20px;margin-bottom:20px;">
+    <div style="width:2px;flex-shrink:0;background:var(--color-primary);"></div>
+    <div class="section-title" style="margin-bottom:0;font-size:24px;font-weight:700;color:#1a1a1a;">${escapeHTML(title)}</div>
+  </div>` : ''}
+  <div class="two-col-row" style="display: flex; gap: 0; flex: 1; min-height: 0;">
     ${buildColumn(leftTitle, leftItems, leftParas, true)}
+    <div style="width:1px;background:#e0e0e0;margin:0 22px;flex-shrink:0;"></div>
     ${rightItems.length > 0 || rightParas.length > 0 ? buildColumn(rightTitle, rightItems, rightParas, false) : ''}
   </div>
 </div>`;
