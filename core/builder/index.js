@@ -87,7 +87,7 @@ async function main() {
 
   if (styleguide) {
     await generateStyleguide(projectName, themePreset);
-    if (openBrowser) openInBrowser(projectName);
+    if (openBrowser) openInBrowser(projectName, 'styleguide.html');
     return;
   }
 
@@ -264,8 +264,8 @@ function getProjectDirs() {
   });
 }
 
-function openInBrowser(name) {
-  const outputPath = path.join(PROJECTS_DIR, name, 'output', 'slides.html');
+function openInBrowser(name, file = 'slides.html') {
+  const outputPath = path.join(PROJECTS_DIR, name, 'output', file);
   if (fs.existsSync(outputPath)) {
     const { exec } = require('child_process');
     exec(`open "${outputPath}"`);
@@ -308,7 +308,11 @@ async function generateStyleguide(name, themePreset) {
     { type:'chart', props:{chartType:'waterfall',title:'瀑布图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['阶段','金额'],rows:[['起始','500'],['+A','+120'],['-B','-80'],['+C','+60'],['结束','600']]},raw:''} },
     { type:'chart', props:{chartType:'waterfall2',title:'分段瀑布图'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['阶段','金额'],rows:[['起始','500'],['+A','+150'],['-B','-60'],['合计','590'],['+C','+80'],['结束','670']]},raw:''} },
     { type:'table', props:{title:'数据表格'}, content:{headings:[{level:2,text:'季度数据'}],paragraphs:[],lists:[],table:{headers:['季度','营收','利润','利润率'],rows:[['Q1','580','120','20.7%'],['Q2','680','145','21.3%'],['Q3','750','168','22.4%'],['Q4','820','192','23.4%']]},raw:''} },
-    { type:'image-text', props:{title:'图文混排'}, content:{headings:[{level:2,text:'产品展示'}],paragraphs:[{text:'产品描述文字'}],lists:[{ordered:false,items:[{text:'特性一',inlineMarkup:[{type:'text',value:'特性一'}]},{text:'特性二',inlineMarkup:[{type:'text',value:'特性二'}]}]}],images:[{alt:'示例图片',src:''}],table:null,raw:''} },
+    { type:'three-column', props:{title:'三栏卡片'}, content:{headings:[{level:2,text:'三大核心优势'},{level:3,text:'技术领先'},{level:3,text:'成本可控'},{level:3,text:'快速落地'}],lists:[{ordered:false,items:[{text:'端侧AI芯片',inlineMarkup:[{type:'text',value:'端侧AI芯片'}]},{text:'光波导显示',inlineMarkup:[{type:'text',value:'光波导显示'}]},{text:'BOM仅¥1,152',inlineMarkup:[{type:'text',value:'BOM仅¥1,152'}]},{text:'毛利率47%',inlineMarkup:[{type:'text',value:'毛利率47%'}]},{text:'3-6个月上市',inlineMarkup:[{type:'text',value:'3-6个月上市'}]},{text:'贴牌模式',inlineMarkup:[{type:'text',value:'贴牌模式'}]}]}],paragraphs:[],table:null,raw:''} },
+    { type:'kpi-grid', props:{title:'KPI概览'}, content:{headings:[],paragraphs:[],lists:[],table:{headers:['指标','数值','趋势'],rows:[['总营收','¥12,800万','↑ +18%'],['活跃用户','128万','↑ +5%'],['客单价','¥456','↑ +8%'],['NPS评分','72分','↑ +3分']]},raw:''} },
+    { type:'image-text', props:{title:'图文混排'}, content:{headings:[{level:2,text:'产品展示'}],paragraphs:[{text:'这是一段产品描述文字，说明图片展示的内容'}],lists:[{ordered:false,items:[{text:'特性一：高质量材质',inlineMarkup:[{type:'text',value:'特性一：高质量材质'}]},{text:'特性二：人体工学设计',inlineMarkup:[{type:'text',value:'特性二：人体工学设计'}]},{text:'特性三：AI智能交互',inlineMarkup:[{type:'text',value:'特性三：AI智能交互'}]}]}],images:[{alt:'示例图片',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIyMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPlNhbXBsZSBJbWFnZTwvdGV4dD48L3N2Zz4K'}],table:null,raw:''} },
+    { type:'image-full', props:{title:'全屏图文'}, content:{headings:[{level:1,text:'沉浸式体验'},{level:2,text:'重新定义出行方式'}],paragraphs:[{text:'岚图AI眼镜 · 130英寸虚拟巨幕'}],images:[{alt:'bg',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NjAiIGhlaWdodD0iNTQwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxYTFhMmUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMwZjM0NjAiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iOTYwIiBoZWlnaHQ9IjU0MCIgZmlsbD0idXJsKCNnKSIvPjwvc3ZnPg=='}],lists:[],table:null,raw:''} },
+    { type:'image-grid', props:{title:'图片矩阵'}, content:{headings:[{level:2,text:'产品图集'},{level:3,text:'产品A'},{level:3,text:'产品B'},{level:3,text:'产品C'},{level:3,text:'产品D'}],images:[{alt:'img1',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNiI+SW1hZ2UgQTwvdGV4dD48L3N2Zz4K'},{alt:'img2',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2U5NDU2MCIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNiI+SW1hZ2UgQjwvdGV4dD48L3N2Zz4K'},{alt:'img3',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzJlY2M3MSIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNiI+SW1hZ2UgQzwvdGV4dD48L3N2Zz4K'},{alt:'img4',src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNiI+SW1hZ2UgRDwvdGV4dD48L3N2Zz4K'}],paragraphs:[],lists:[],table:null,raw:''} },
     { type:'quote', props:{title:'引用页'}, content:{headings:[{level:1,text:'千里之行，始于足下'},{level:2,text:'老子'}],paragraphs:[],lists:[],table:null,raw:''} },
     { type:'ending', props:{title:'结束页'}, content:{headings:[{level:1,text:'谢谢'}],paragraphs:[{text:'contact@company.com'}],lists:[],table:null,raw:''} },
   ];

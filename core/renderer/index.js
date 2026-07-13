@@ -35,26 +35,31 @@ const DEFAULT_CONFIG = {
 };
 
 // 模板注册表：类型 → 模板文件
+// layouts/ = 页面布局  charts/ = 图表  contents/ = 特殊内容
 const TEMPLATE_REGISTRY = {
-  'title':         './templates/title.html.js',
-  'content':       './templates/content.html.js',
-  'chart':         './templates/chart-bar.html.js',
-  'chart-bar':     './templates/chart-bar.html.js',
-  'chart-pie':     './templates/chart-pie.html.js',
-  'chart-line':    './templates/chart-line.html.js',
-  'chart-radar':   './templates/chart-radar.html.js',
-  'chart-pareto':  './templates/chart-pareto.js',
-  'chart-compare': './templates/chart-compare.js',
-  'chart-waterfall': './templates/chart-waterfall.js',
-  'chart-waterfall2':'./templates/chart-waterfall2.js',
-  'summary':       './templates/summary.html.js',
-  'two-column':    './templates/two-column.html.js',
-  'toc':           './templates/toc.html.js',
-  'section':       './templates/section.html.js',
-  'table':         './templates/table.html.js',
-  'ending':        './templates/ending.html.js',
-  'quote':         './templates/quote.html.js',
-  'image-text':    './templates/image-text.html.js',
+  'title':         './templates/layouts/title.html.js',
+  'content':       './templates/layouts/content.html.js',
+  'summary':       './templates/layouts/summary.html.js',
+  'two-column':    './templates/layouts/two-column.html.js',
+  'toc':           './templates/layouts/toc.html.js',
+  'section':       './templates/layouts/section.html.js',
+  'ending':        './templates/layouts/ending.html.js',
+  'chart':         './templates/charts/chart-bar.html.js',
+  'chart-bar':     './templates/charts/chart-bar.html.js',
+  'chart-pie':     './templates/charts/chart-pie.html.js',
+  'chart-line':    './templates/charts/chart-line.html.js',
+  'chart-radar':   './templates/charts/chart-radar.html.js',
+  'chart-pareto':  './templates/charts/chart-pareto.js',
+  'chart-compare': './templates/charts/chart-compare.js',
+  'chart-waterfall': './templates/charts/chart-waterfall.js',
+  'chart-waterfall2':'./templates/charts/chart-waterfall2.js',
+  'three-column':  './templates/layouts/three-column.html.js',
+  'kpi-grid':      './templates/layouts/kpi-grid.html.js',
+  'table':         './templates/contents/table.html.js',
+  'quote':         './templates/contents/quote.html.js',
+  'image-text':    './templates/contents/images/image-text.html.js',
+  'image-full':    './templates/contents/images/image-full.html.js',
+  'image-grid':    './templates/contents/images/image-grid.html.js',
 };
 
 /**
@@ -260,9 +265,27 @@ function extractAllSlideData(slides, config) {
     } else if (ast.type === 'quote') {
       const author = ast.content.headings[1]?.text || (ast.content.paragraphs[0]?.text || '');
       all.push({ ...base, quote: base.title, author });
+    } else if (ast.type === 'three-column') {
+      const h3s = ast.content.headings.filter(h => h.level >= 3);
+      const allItems = []; for (const list of ast.content.lists) for (const item of list.items) allItems.push(item.text || '');
+      const per = Math.ceil(allItems.length / 3);
+      const cols = [0,1,2].map(i => ({ title: h3s[i]?.text || '', items: allItems.slice(i*per, (i+1)*per) }));
+      all.push({ ...base, cols });
+    } else if (ast.type === 'kpi-grid') {
+      const table = ast.content.table;
+      const kpis = table ? table.rows.slice(0,4).map(r => ({ label: r[0], value: r[1]||'', trend: r[2]||'' })) : [];
+      all.push({ ...base, kpis });
     } else if (ast.type === 'image-text') {
       const items = []; for (const list of ast.content.lists) for (const item of list.items) items.push(item.text || '');
-      all.push({ ...base, items });
+      const imgSrc = (ast.content.images && ast.content.images[0]) ? ast.content.images[0].src : '';
+      all.push({ ...base, items, imgSrc });
+    } else if (ast.type === 'image-full') {
+      const imgSrc = (ast.content.images && ast.content.images[0]) ? ast.content.images[0].src : '';
+      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '', imgSrc });
+    } else if (ast.type === 'image-grid') {
+      const imgSrcs = (ast.content.images || []).map(img => img.src || '');
+      const labels = ast.content.headings.filter(h => h.level >= 3).map(h => h.text);
+      all.push({ ...base, imgSrcs, labels });
     } else {
       all.push(base);
     }
@@ -420,7 +443,11 @@ function buildPptxFromSlideData() {
     else if (s.type === 'table')      addTableSlidePptx(pptx, s);
     else if (s.type === 'ending')     addEndingSlidePptx(pptx, s);
     else if (s.type === 'quote')      addQuoteSlidePptx(pptx, s);
-    else if (s.type === 'image-text') addImageTextSlidePptx(pptx, s);
+    else if (s.type === 'three-column') addThreeColSlidePptx(pptx, s);
+    else if (s.type === 'kpi-grid')     addKpiGridSlidePptx(pptx, s);
+    else if (s.type === 'image-text')   addImageTextSlidePptx(pptx, s);
+    else if (s.type === 'image-full')   addImageFullSlidePptx(pptx, s);
+    else if (s.type === 'image-grid')   addImageGridSlidePptx(pptx, s);
     else if (s.type === 'chart') {
       if (isWaterfallType(s.chartType)) addWaterfallShapes(pptx, s);
       else addNativeChartSlide(pptx, s);
@@ -831,15 +858,81 @@ function addQuoteSlidePptx(pptx, s) {
 function addImageTextSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
   drawBackgroundShapes(slide);
-  if (s.title) slide.addText(s.title, { x: 5.2, y: 0.3, w: 4.5, h: 0.5, fontSize: 20, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
+  if (s.imgSrc) { try { slide.addImage({ data: s.imgSrc, x: 0.3, y: 0.5, w: 5.0, h: 4.6, sizing: { type: 'contain', w: 5.0, h: 4.6 } }); } catch(e) {} }
+  if (s.title) slide.addText(s.title, { x: 5.6, y: 0.5, w: 4.0, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  slide.addShape('rect', { x: 5.6, y: 1.05, w: 0.7, h: 0.03, fill: { color: '1a1a1a' } });
   if (s.items) {
-    var iy = 1.0;
+    var iy = 1.3;
     s.items.forEach(function(item) {
       if (iy > 4.8) return;
-      slide.addText('▸ ' + item, { x: 5.2, y: iy, w: 4.3, h: 0.32, fontSize: 12, color: '444444', fontFace: 'Microsoft YaHei' });
-      iy += 0.3;
+      slide.addText('▸ ' + item, { x: 5.6, y: iy, w: 3.8, h: 0.32, fontSize: 13, color: '444444', fontFace: 'Microsoft YaHei' });
+      iy += 0.32;
     });
   }
+}
+
+function addImageFullSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  if (s.imgSrc) { try { slide.addImage({ data: s.imgSrc, x: 0, y: 0, w: 10, h: 5.625, sizing: { type: 'cover', w: 10, h: 5.625 } }); } catch(e) {} }
+  else { slide.background = { fill: '1a1a2e' }; }
+  slide.addShape('rect', { x: 0, y: 0, w: 10, h: 5.625, fill: { color: '000000', transparency: 45 } });
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 1.6, w: 9, h: 1.0, fontSize: 36, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Microsoft YaHei' });
+  if (s.subtitle) slide.addText(s.subtitle, { x: 1, y: 2.6, w: 8, h: 0.5, fontSize: 16, color: 'CCCCDD', align: 'center', fontFace: 'Microsoft YaHei' });
+  slide.addShape('rect', { x: 4.3, y: 3.3, w: 1.4, h: 0.03, fill: { color: 'FFFFFF' } });
+}
+
+function addThreeColSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  slide.addShape('rect', { x: 0.5, y: 0.85, w: 0.7, h: 0.03, fill: { color: '1a1a1a' } });
+  if (!s.cols) return;
+  var colors = ['4472C4', 'ED7D31', '70AD47'];
+  s.cols.forEach(function(col, i) {
+    var cx = 0.5 + i * 3.1;
+    slide.addShape('rect', { x: cx, y: 1.1, w: 2.9, h: 3.8, fill: { color: 'F5F7FF' }, rectRadius: 0 });
+    slide.addShape('oval', { x: cx + 0.15, y: 1.2, w: 0.45, h: 0.45, fill: { color: colors[i] } });
+    slide.addText(String(i+1), { x: cx + 0.15, y: 1.2, w: 0.45, h: 0.45, fontSize: 14, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Microsoft YaHei' });
+    if (col.title) slide.addText(col.title, { x: cx + 0.75, y: 1.25, w: 2.0, h: 0.4, fontSize: 15, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
+    var iy = 1.8;
+    (col.items || []).forEach(function(item) {
+      if (iy > 4.6) return;
+      slide.addText(item, { x: cx + 0.3, y: iy, w: 2.3, h: 0.28, fontSize: 11, color: '555555', fontFace: 'Microsoft YaHei' });
+      iy += 0.26;
+    });
+  });
+}
+
+function addKpiGridSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  if (!s.kpis) return;
+  var colors = ['4472C4', 'ED7D31', '70AD47', 'FFC000'];
+  s.kpis.forEach(function(kpi, i) {
+    var row = Math.floor(i / 2), col = i % 2;
+    var cx = 0.5 + col * 4.7, cy = 1.1 + row * 2.1;
+    slide.addShape('rect', { x: cx, y: cy, w: 4.4, h: 1.9, fill: { color: 'F5F7FF' }, rectRadius: 0 });
+    slide.addShape('rect', { x: cx, y: cy, w: 4.4, h: 0.05, fill: { color: colors[i] } });
+    slide.addText(kpi.value, { x: cx + 0.3, y: cy + 0.25, w: 3.8, h: 0.7, fontSize: 32, bold: true, color: '1a1a1a', fontFace: 'Courier New' });
+    slide.addText(kpi.label, { x: cx + 0.3, y: cy + 1.0, w: 3.8, h: 0.4, fontSize: 12, color: '888888', fontFace: 'Microsoft YaHei' });
+    if (kpi.trend) slide.addText(kpi.trend, { x: cx + 0.3, y: cy + 1.35, w: 3.8, h: 0.35, fontSize: 13, bold: true, color: (kpi.trend.startsWith('+')||kpi.trend.startsWith('↑'))?'16A34A':'DC2626', fontFace: 'Microsoft YaHei' });
+  });
+}
+
+function addImageGridSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (s.title) slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  if (!s.imgSrcs || s.imgSrcs.length === 0) return;
+  var cols = s.imgSrcs.length <= 4 ? 2 : 3;
+  var cellW = 9.0 / cols, cellH = 4.0 / Math.ceil(s.imgSrcs.length / cols);
+  s.imgSrcs.forEach(function(src, i) {
+    var row = Math.floor(i / cols), col = i % cols;
+    var cx = 0.5 + col * cellW, cy = 1.0 + row * (cellH + 0.08);
+    try { slide.addImage({ data: src, x: cx + 0.05, y: cy, w: cellW - 0.1, h: cellH - 0.3, sizing: { type: 'contain', w: cellW - 0.1, h: cellH - 0.3 } }); } catch(e) {}
+    if (s.labels && s.labels[i]) slide.addText(s.labels[i], { x: cx, y: cy + cellH - 0.28, w: cellW, h: 0.25, fontSize: 10, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
+  });
 }
 
 /** 非图表页：文本提取（旧版兼容，不再使用） */
