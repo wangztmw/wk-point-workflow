@@ -37,29 +37,29 @@ const DEFAULT_CONFIG = {
 // 模板注册表：类型 → 模板文件
 // layouts/ = 页面布局  charts/ = 图表  contents/ = 特殊内容
 const TEMPLATE_REGISTRY = {
-  'title':         './templates/layouts/title.html.js',
-  'content':       './templates/layouts/content.html.js',
-  'summary':       './templates/layouts/summary.html.js',
-  'two-column':    './templates/layouts/two-column.html.js',
-  'toc':           './templates/layouts/toc.html.js',
-  'section':       './templates/layouts/section.html.js',
-  'ending':        './templates/layouts/ending.html.js',
-  'chart':         './templates/charts/chart-bar.html.js',
-  'chart-bar':     './templates/charts/chart-bar.html.js',
-  'chart-pie':     './templates/charts/chart-pie.html.js',
-  'chart-line':    './templates/charts/chart-line.html.js',
-  'chart-radar':   './templates/charts/chart-radar.html.js',
-  'chart-pareto':  './templates/charts/chart-pareto.js',
-  'chart-compare': './templates/charts/chart-compare.js',
-  'chart-waterfall': './templates/charts/chart-waterfall.js',
-  'chart-waterfall2':'./templates/charts/chart-waterfall2.js',
-  'three-column':  './templates/layouts/three-column.html.js',
-  'kpi-grid':      './templates/layouts/kpi-grid.html.js',
-  'table':         './templates/contents/table.html.js',
-  'quote':         './templates/contents/quote.html.js',
-  'image-text':    './templates/contents/images/image-text.html.js',
-  'image-full':    './templates/contents/images/image-full.html.js',
-  'image-grid':    './templates/contents/images/image-grid.html.js',
+  'title':         '../templates/layouts/title.html.js',
+  'content':       '../templates/layouts/content.html.js',
+  'summary':       '../templates/layouts/summary.html.js',
+  'two-column':    '../templates/layouts/two-column.html.js',
+  'toc':           '../templates/layouts/toc.html.js',
+  'section':       '../templates/layouts/section.html.js',
+  'ending':        '../templates/layouts/ending.html.js',
+  'chart':         '../templates/charts/chart-bar.html.js',
+  'chart-bar':     '../templates/charts/chart-bar.html.js',
+  'chart-pie':     '../templates/charts/chart-pie.html.js',
+  'chart-line':    '../templates/charts/chart-line.html.js',
+  'chart-radar':   '../templates/charts/chart-radar.html.js',
+  'chart-pareto':  '../templates/charts/chart-pareto.js',
+  'chart-compare': '../templates/charts/chart-compare.js',
+  'chart-waterfall': '../templates/charts/chart-waterfall.js',
+  'chart-waterfall2':'../templates/charts/chart-waterfall2.js',
+  'three-column':  '../templates/layouts/three-column.html.js',
+  'kpi-grid':      '../templates/layouts/kpi-grid.html.js',
+  'table':         '../templates/contents/table.html.js',
+  'quote':         '../templates/contents/quote.html.js',
+  'image-text':    '../templates/contents/images/image-text.html.js',
+  'image-full':    '../templates/contents/images/image-full.html.js',
+  'image-grid':    '../templates/contents/images/image-grid.html.js',
 };
 
 /**
@@ -148,7 +148,7 @@ function loadTemplates() {
 
 function loadBaseCSS() {
   try {
-    return fs.readFileSync(path.join(__dirname, 'templates', 'base.css'), 'utf-8');
+    return fs.readFileSync(path.join(__dirname, '..', 'templates', 'base.css'), 'utf-8');
   } catch {
     return '/* base.css not found */';
   }

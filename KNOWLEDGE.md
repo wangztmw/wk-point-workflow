@@ -2,28 +2,109 @@
 
 ---
 
-## 导出技术路线总览
+## PPT 导出技术总结（5 种底层方式）
 
-本项目 Markdown → PPT 的导出统一使用 **PptxGenJS 数据驱动** 方式。HTML 是预览载体兼数据源——构建时把全部 slide 结构数据（`SLIDE_DATA`）以 JSON 嵌入 HTML，浏览器导出按钮读取 JSON 调用 PptxGenJS 生成 PPTX。
+本项目所有幻灯片导出统一走 PptxGenJS。按底层 API 的不同，分为 5 种技术：
 
-### 技术路线表
+### 技术 1：手动布局（text-layout）— addText + addShape
 
-| 幻灯片类型 | 导出技术 | 效果 |
-|-----------|---------|------|
-| **title（封面）** | PptxGenJS | `slide.background` 深色背景 + `addText` 居中大字标题 |
-| **content（内容）** | PptxGenJS | `addText` 富文本（`toRuns()` 保留粗体/斜体）+ `addShape` 分隔线 |
-| **summary（总结）** | PptxGenJS | `addShape('rect')` 卡片背景 + 彩色左边框 + `addText` 标题和列表 |
-| **two-column（两栏）** | PptxGenJS | 左右两个 `addShape('rect')` 分区 + 各含独立标题和列表 |
-| **chart-bar/pie/line/radar** | PptxGenJS `addChart()` | **原生 OOXML 图表**。每根柱子/扇区独立可选，双击弹出内嵌数据表编辑数值 |
-| **chart-pareto/compare** | PptxGenJS `addChart()` | 同上，原生图表。帕累托图降级为柱状图导出 |
-| **chart-waterfall/waterfall2** | PptxGenJS 形状拼凑 | 每根柱子 = 独立 `addShape('rect')`，虚线 = `addShape('line')`，标签 = `addText`。可自由拖拽/改色/缩放，但无内嵌数据表 |
-| **非图表页的富文本** | PptxGenJS `toRuns()` | 粗体 `**text**` → `{text, options:{bold:true}}`，斜体同理。保留 Markdown 语义 |
+**覆盖 10 个模板**：title / content / summary / two-column / three-column / kpi-grid / toc / section / ending / quote / fallback
 
-### 已废弃的技术
+**原理**：在 10×5.625 英寸画布上，用 `slide.addText()` 和 `slide.addShape('rect')` 手动定位每个文字块和装饰形状。没有自动化布局——每个元素的 x/y/w/h 都是写死的坐标。
+
+```js
+slide.addText(s.title, { x: 0.5, y: 1.6, w: 9, h: 1.0, fontSize: 36, bold: true, color: 'FFFFFF', align: 'center' });
+slide.addShape('rect', { x: 0.6, y: 0.9, w: 0.9, h: 0.06, fill: { color: '667eea' } });
+```
+
+**富文本**：Markdown 的 `**粗体**` 通过 `toRuns()` 转为 `[{text, options:{bold:true}}]` 数组，PptxGenJS 支持单格内多段文字不同格式。
+
+**坐标计算**：所有坐标 = 英寸。16:9 幻灯片 = 10×5.625 英寸。Y 轴从上往下。
+
+### 技术 2：原生 OOXML 图表（native-chart）— addChart
+
+**覆盖 6 个模板**：chart-bar / chart-pie / chart-line / chart-radar / chart-pareto / chart-compare
+
+**原理**：`slide.addChart()` 生成 `<c:chart>` 原生图表元素。不是图片，是真正的 PowerPoint 图表对象——双击打开内嵌数据表编辑数值。
+
+```js
+slide.addChart(pptx.charts.BAR, [
+  { name: '产品A', labels: ['Q1','Q2','Q3'], values: [120, 145, 168] },
+], { x: 0.6, y: 0.9, w: 8.8, h: 4.2, showValue: true, chartColors: ['4472C4'] });
+```
+
+**图表类型映射**：bar→BAR, line→LINE, pie→PIE, doughnut→DOUGHNUT, radar→RADAR
+
+**限制**：PptxGenJS 不支持的图表类型（pareto、compare）降级为 bar。
+
+### 技术 3：形状拼凑（waterfall）— addShape 逐根画
+
+**覆盖 2 个模板**：chart-waterfall / chart-waterfall2
+
+**原理**：PptxGenJS 没有 waterfall 图表类型，必须用 `addShape('rect')` 逐根柱子手动画。每根柱子的 y 和 h 通过累计值计算。虚线用 `addShape('line')`，标签用 `addText()`。
+
+```js
+slide.addShape('rect', { x: cx, y: barBottomY, w: barW, h: barH, fill: { color: '16A34A' } });
+slide.addShape('line', { x: prevX, y: prevConnectY, w: stepX, h: 0, line: { color: '999999', width: 1, dashType: 'dash' } });
+```
+
+**关键细节**：
+- 落地柱（起点/终点/合计）：从 y=0 画全高
+- 浮动柱（增量/减量）：从 runningTotal 的位置开始，高度 = |delta|
+- 连接线方向：增量在顶部平齐，减量在底部平齐
+- Y 轴范围 = 中间累计最大值 × 1.08（排除首尾行）
+
+### 技术 4：表格（table）— addTable + 单格边框
+
+**覆盖 1 个模板**：table（三线表）
+
+**原理**：`slide.addTable()` + 每格单独设置 `border: [上, 右, 下, 左]` 数组，实现顶线 3pt、表头下线 2pt、底线 3pt。
+
+```js
+slide.addTable(rows, { x: 0.5, y: 1.1, w: 9.0, border: { type: 'none' } });
+// 表头格: border: [{pt:3}, N, {pt:2}, N]
+// 最后行: border: [N, N, {pt:3}, N]
+```
+
+**踩坑**：border 只认数组格式 `[上,右,下,左]`，对象格式 `{top:...}` 被忽略。addTable 必须设 `border:{type:'none'}` 关闭默认全框。
+
+### 技术 5：图片嵌入（image）— addImage
+
+**覆盖 3 个模板**：image-text / image-full / image-grid
+
+**原理**：`slide.addImage()` 将 base64 或 URL 图片嵌入 PPTX。全屏模式叠加半透明矩形模拟蒙版。
+
+```js
+slide.addImage({ data: s.imgSrc, x: 0.3, y: 0.5, w: 5.0, h: 4.6, sizing: { type: 'contain', w: 5.0, h: 4.6 } });
+```
+
+**注意**：`addImage` 必须用 try/catch 包裹（图片 URL 可能失效）。
+
+---
+
+### 总览表
+
+| 技术 | PptxGenJS API | 模板数 | 特点 |
+|------|--------------|:--:|------|
+| 手动布局 | addText + addShape | 11 | 坐标写死，每个模板独立布局 |
+| 原生图表 | addChart | 6 | OOXML 原生，双击编辑数据 |
+| 形状拼凑 | addShape rect+line | 2 | 瀑布图专属，无原生支持 |
+| 表格 | addTable | 1 | 单格 border 数组实现三线表 |
+| 图片嵌入 | addImage | 3 | 支持 base64/URL |
+
+### 已废弃
 
 | 技术 | 原因 |
 |------|------|
-| **dom-to-pptx** | HTML DOM → PPTX 方式。文本/CSS 保留度高，但无法处理 ECharts stack 图表（瀑布图塌缩）、foreignObject 导致位图化。已被 PptxGenJS 数据驱动方式取代。CDN 仍加载但不再主动调用。 |
+| **dom-to-pptx** | 无法处理 ECharts stack（瀑布塌缩）、foreignObject→位图化 |
+
+### 数据流
+
+```
+SlideAST → extractAllSlideData() → SLIDE_DATA JSON → 嵌入 HTML
+  → 浏览器 buildPptxFromSlideData() → 按 type 路由到 5 种技术
+    → PptxGenJS 生成 .pptx
+```
 
 ### 核心技术代码
 

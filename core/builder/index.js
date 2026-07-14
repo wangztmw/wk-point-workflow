@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('../parser');
-const { render } = require('../renderer');
+const { render } = require('../html-engine');
 
 const PROJECTS_DIR = path.join(__dirname, '..', '..', 'projects');
 const DEFAULT_PROJECT = 'demo-1';
@@ -280,7 +280,7 @@ function deepMerge(target, source) {
 // ============================================================
 
 async function generateStyleguide(name, themePreset) {
-  const { render } = require('../renderer');
+  const { render } = require('../html-engine');
   // 为每种模板类型构造示例 AST
   const samples = [
     { type:'title', props:{title:'封面页示例'}, content:{headings:[{level:1,text:'样式指南'},{level:2,text:'全部模板预览'}],paragraphs:[{text:'构建日期: '+new Date().toLocaleDateString()}],lists:[],table:null,raw:''} },
