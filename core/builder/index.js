@@ -240,16 +240,6 @@ async function buildProject(name, themePreset) {
   console.log(`   输出: ${outputPath}`);
   console.log(`   预览: 在浏览器中打开 output/slides.html 即可预览和导出\n`);
 
-  // 同时生成原生 PPTX（如果 exporter 可用）
-  try {
-    const { exportToFile } = require('../exporter');
-    const pptxPath = path.join(outputDir, 'slides-native.pptx');
-    await exportToFile(slides, config, pptxPath);
-    console.log(`   ✅ 原生 PPTX: output/slides-native.pptx\n`);
-  } catch (err) {
-    // exporter 可选，不强制
-  }
-
   return true;
 }
 

@@ -935,53 +935,6 @@ function addImageGridSlidePptx(pptx, s) {
   });
 }
 
-/** 非图表页：文本提取（旧版兼容，不再使用） */
-function addTextSlide(pptx, slideEl, idx) {
-  var s = pptx.addSlide();
-  var blocks = extractTextBlocks(slideEl);
-  if (blocks.length === 0) {
-    s.addText('[ 第 ' + (idx+1) + ' 页 ]', {
-      x: 0.5, y: 2.5, w: 9, h: 0.6, fontSize: 14, color: '999999', align: 'center'
-    });
-    return;
-  }
-  var y = 0.35;
-  blocks.forEach(function(b) {
-    var fs = 12, bold = false;
-    if (b.tag === 'H1') { fs = 30; bold = true; }
-    else if (b.tag === 'H2') { fs = 20; bold = true; }
-    else if (b.tag === 'H3') { fs = 16; bold = true; }
-    var h = Math.max(0.28, fs * 0.02 * Math.ceil(b.text.length / 70) + 0.04);
-    if (y + h > 5.2) return;
-    s.addText(b.text, {
-      x: 0.6, y: y, w: 8.8, h: h,
-      fontSize: fs, bold: bold,
-      color: b.tag.match(/^H\\d$/) ? '1a1a2e' : '333333',
-      fontFace: 'Microsoft YaHei', valign: 'top',
-    });
-    y += h + 0.03;
-  });
-}
-
-function extractTextBlocks(el) {
-  var blocks = [];
-  function walk(node) {
-    if (!node || !node.tagName) return;
-    var tag = node.tagName.toUpperCase();
-    if (['SCRIPT','STYLE','NOSCRIPT','SVG','IFRAME','CANVAS'].indexOf(tag) !== -1) return;
-    var ownText = (node.childNodes.length === 1 && node.childNodes[0].nodeType === 3)
-      ? (node.textContent || '').trim() : '';
-    var hasChildren = Array.from(node.children).length > 0;
-    if (ownText && ownText.length > 0 && !hasChildren) {
-      blocks.push({ text: ownText.substring(0, 400), tag: tag });
-      return;
-    }
-    Array.from(node.children).forEach(function(c) { walk(c); });
-  }
-  walk(el);
-  return blocks;
-}
-
 console.log('%c✅ MD→HTML 已就绪 %c| %c' + ${slideCount} + ' 页 %c| %c图表: ' + (chartSlides ? chartSlides.length : 0) + ' 个',
   'font-size:14px;color:#667eea;', '', 'color:#888;', '', 'color:#2ecc71;');
 console.log('%c📌 "导出 PPTX" → PptxGenJS 数据驱动导出，图表=原生OOXML，瀑布图=独立形状，文本页=富文本保留粗体', 'color:#2ecc71;');
