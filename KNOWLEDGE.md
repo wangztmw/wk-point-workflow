@@ -488,8 +488,281 @@ ECharts SVG 模式下默认用 `<foreignObject>` 嵌入 HTML 渲染富文本。d
 
 ## 经验 5：模板注册流程
 
-1. `core/renderer/templates/` 创建 `chart-xxx.js`
+1. `core/templates/<category>/` 创建 `xxx.js`
 2. 导出 `{ render }` 函数，接收 `(ast, config)`
-3. 在 `core/renderer/index.js` 的 `TEMPLATE_REGISTRY` 注册
-4. Markdown 用 `<!-- slide: chart, type=xxx -->` 引用
-5. 路由：`resolveTemplateName()` → `chart-${ct}` → 查找模板
+3. 在 `core/html-engine/index.js` 的 `TEMPLATE_REGISTRY` 注册
+4. 在 `core/html-engine/index.js` 的 `extractAllSlideData()` 添加数据提取
+5. 在 `core/html-engine/index.js` 的 `buildPptxFromSlideData()` 添加导出路由
+6. 在 `core/ppt-engine/` 对应技术文件中添加导出函数
+7. Markdown 用 `<!-- slide: type=xxx -->` 引用
+
+---
+
+## 项目调用结构（函数级完整版）
+
+### 总览
+
+```
+content.md → parser → SlideAST → html-engine → slides.html → 浏览器导出 → ppt-engine → .pptx
+```
+
+### 第一层：parser — MD → AST
+
+**文件**：`core/parser/index.js`
+
+**入口**：`parse(markdownString)`
+
+```
+parse(md)
+  ├── splitSlides(md)          按 --- 分割成原始块
+  │
+  └── for each 块:
+        parseSlide(raw, index)
+          ├── extractDirective()   提取 <!-- slide: type, key=value -->
+          ├── parseContent(body)   解析正文
+          │     ├── parseTable()       表格 → {headers, rows}
+          │     ├── parseUnorderedList()  - 列表
+          │     ├── parseOrderedList()   1. 列表
+          │     ├── parseParagraph()     段落
+          │     └── parseInline()        **粗体** *斜体* `代码`
+          │
+          └── 返回 { type, props, content:{headings,lists,table,blocks}, index }
+```
+
+**输出**：`SlideAST[]`
+
+### 第二层：html-engine — AST → HTML
+
+**文件**：`core/html-engine/index.js`
+
+**入口**：`render(slides, config)`
+
+```
+render(slides, config)
+  │
+  ├── 1. mergeConfig()           合并用户配置 + 默认值
+  ├── 2. loadTemplates()         加载 TEMPLATE_REGISTRY 中的 20 个模板
+  ├── 3. loadBaseCSS()           读取 core/templates/base.css
+  ├── 4. generateThemeCSS()      生成 CSS 变量
+  │
+  ├── 5. for each SlideAST:
+  │       resolveTemplateName(ast)     chart + chartType → chart-xxx
+  │       templates[name].render(ast)  调用模板函数 → HTML 片段
+  │
+  ├── 6. extractAllSlideData(slides)   遍历 AST 提取 SLIDE_DATA JSON
+  │       ├── type='title'     → { title, subtitle }
+  │       ├── type='content'   → { title, items:[{text,runs}], subHeadings }
+  │       ├── type='summary'   → { title, cards:[{title,items}] }
+  │       ├── type='chart'     → { chartType, categories, series }
+  │       ├── type='table'     → { headers, rows }
+  │       └── ...（20 种类型各有分支）
+  │       └── toRuns(inlineMarkup)  粗体斜体 → PptxGenJS runs
+  │
+  └── 7. buildDocument({slidesHTML, slideData, ...})
+          ├── 嵌入 ECharts + PptxGenJS CDN <script>
+          ├── 嵌入 base.css + 主题 CSS
+          ├── 嵌入 slidesHTML（所有 slide div）
+          ├── 嵌入 SLIDE_DATA JSON
+          ├── 嵌入 BACKGROUND_CONFIG（如有）
+          └── 嵌入 <script> 导出逻辑（ppt-engine 的 5 种技术）
+```
+
+**输出**：`slides.html`
+
+### 第三层：templates — 模板渲染
+
+**文件夹**：`core/templates/`
+
+每个模板的 `render(ast, config)` 返回 HTML 字符串：
+
+```
+core/templates/layouts/
+  title.js         render() → 渐变背景 + 居中大字
+  content.js       render() → 标题 + 2px分隔线 + 列表（按blocks顺序）
+  summary.js       render() → 3张卡片网格 + 彩色左边框
+  two-column.js    render() → 左右分栏 + 中间竖线 + 编号前缀
+  three-column.js  render() → 三栏 + 彩色编号圆圈
+  kpi-grid.js      render() → 2×2 大数字KPI卡片
+  toc.js           render() → 编号目录列表
+  section.js       render() → 深色全屏过渡 + 居中标题
+  ending.js        render() → 渐变背景致谢页
+
+core/templates/charts/
+  chart-bar.js     render() → ECharts bar + SVG renderer
+  chart-pie.js     render() → ECharts doughnut + SVG
+  chart-line.js    render() → ECharts line + smooth + area fill
+  chart-radar.js   render() → ECharts radar + polygon
+  chart-pareto.js  render() → ECharts bar+line 双Y轴 80/20 标记线
+  chart-compare.js render() → ECharts grouped bar + delta ↑↓标注
+  chart-waterfall.js    render() → ECharts stack(透明底座) + custom 水平线
+  chart-waterfall2.js   render() → ECharts stack + 落地柱 + 分段累计
+
+core/templates/contents/
+  table.js         render() → 三线表 HTML（border-top/bottom 3px）
+  quote.js         render() → 居中引用 + 出处
+  images/image-text.js  render() → 左图右文 flex 分栏
+  images/image-full.js  render() → 全屏背景图 + 渐变蒙版
+  images/image-grid.js  render() → CSS Grid 2×2 图矩阵
+```
+
+### 第三层（续）：ppt-engine — SLIDE_DATA → PPTX
+
+**文件夹**：`core/ppt-engine/`
+
+浏览器点击导出按钮后执行。5 种底层技术：
+
+```
+exportDomToPptx()
+  → exportHybridPptx()
+    → buildPptxFromSlideData()          ← ppt-engine/index.js 调度器
+        │
+        ├── s.type='title'              → addTitleSlidePptx()       ← text-layout
+        ├── s.type='content'            → addContentSlidePptx()     ← text-layout
+        ├── s.type='summary'            → addSummarySlidePptx()     ← text-layout
+        ├── s.type='two-column'         → addTwoColumnSlidePptx()   ← text-layout
+        ├── s.type='three-column'       → addThreeColSlidePptx()    ← text-layout
+        ├── s.type='kpi-grid'           → addKpiGridSlidePptx()     ← text-layout
+        ├── s.type='toc'                → addTocSlidePptx()         ← text-layout
+        ├── s.type='section'            → addSectionSlidePptx()     ← text-layout
+        ├── s.type='ending'             → addEndingSlidePptx()      ← text-layout
+        ├── s.type='quote'              → addQuoteSlidePptx()       ← text-layout
+        ├── s.type='fallback'           → addFallbackSlidePptx()    ← text-layout
+        │
+        ├── s.type='chart'
+        │     ├── waterfall/waterfall2  → addWaterfallShapes()      ← waterfall
+        │     └── bar/pie/line/...      → addNativeChartSlide()     ← native-chart
+        │
+        ├── s.type='table'              → addTableSlidePptx()       ← table
+        │
+        ├── s.type='image-text'         → addImageTextSlidePptx()   ← image
+        ├── s.type='image-full'         → addImageFullSlidePptx()   ← image
+        └── s.type='image-grid'         → addImageGridSlidePptx()   ← image
+```
+
+| ppt-engine 文件 | 底层 API | 模板数 |
+|----------------|---------|:--:|
+| text-layout.js | addText + addShape('rect') | 11 |
+| native-chart.js | slide.addChart() | 6 |
+| waterfall.js | addShape('rect') + addShape('line') | 2 |
+| table.js | addTable + cell border 数组 | 1 |
+| image.js | slide.addImage() | 3 |
+
+### builder — CLI 调度
+
+**文件**：`core/builder/index.js`
+
+```
+node core/builder/index.js <project> [--watch] [--theme] [--styleguide]
+
+main()
+  ├── --styleguide  → generateStyleguide()
+  │     ├── require('./styleguide-data')  → 22 个示例 AST
+  │     └── render(samples, config)       → styleguide.html
+  │
+  └── 普通构建      → buildProject(name)
+        ├── fs.readFile(content.md)
+        ├── parse(md)               ← 调用 core/parser
+        ├── render(slides, config)  ← 调用 core/html-engine
+        ├── 检测 assets/ 背景图 → styler 提取 → bg.json 缓存
+        └── fs.writeFile(output/slides.html)
+```
+
+---
+
+## HTML 引擎和 PPT 引擎如何保持一致
+
+### 现状：人工对齐，没有自动保证
+
+两者的唯一共同点是 **SLIDE_DATA**（内容一致）。布局和样式各自写死：
+
+```
+SLIDE_DATA
+    │
+    ├──▶ templates/content.js        padding:48px 70px, 标题24px
+    │         ↓ HTML 预览
+    │
+    └──▶ ppt-engine/text-layout.js   x:0.6, y:0.4, fontSize:22
+              ↓ PPTX 导出
+```
+
+### 三条约定
+
+1. **同一个数据源**：HTML 和 PPTX 都从 `SLIDE_DATA` 取数据，内容天然一致
+2. **同一个模板类型**：`buildPptxFromSlideData()` 的 switch-case 和 `TEMPLATE_REGISTRY` 的映射同构——20 种 type 一一对应
+3. **人工对齐坐标**：HTML 用 CSS px，PPTX 用英寸坐标。没有换算公式，靠开发时反复调试对齐
+
+### 如果要彻底解决
+
+需要一个共享的布局描述层（spec），HTML 渲染器和 PPTX 渲染器都从 spec 读取参数而非各自写死：
+
+```js
+// templates/content/spec.js
+module.exports = {
+  title:    { fontSize: 22, x: 0.6, y: 0.4 },
+  divider:  { width: 0.7, height: 2, color: '#1a1a1a' },
+  items:    { fontSize: 13, x: 0.8, lineHeight: 1.9 },
+};
+```
+
+改一处 spec，HTML 和 PPTX 同步生效。这是下一步方向，当前靠 22 个模板各自对应同名的 PPTX 导出函数，人工保证一致。
+
+---
+
+## Markdown 控制了 HTML 的布局吗？
+
+不完全是。Markdown 决定了**内容和顺序**，模板决定了**视觉布局**。
+
+### Markdown 决定的部分
+
+```markdown
+## 核心成果
+- 第一条
+- 第二条
+### 关键里程碑
+1. Q1 完成融资
+```
+
+Markdown 决定了：
+- ✅ 标题是"核心成果"
+- ✅ 有两个列表项
+- ✅ 有序列表跟在 h3 后面
+- ✅ blocks 数组保留了"标题→列表→次级标题→有序列表"的顺序
+
+### 模板决定的部分
+
+`templates/layouts/content.js` 决定了：
+- ✅ 标题 24px，颜色 #1a1a1a
+- ✅ 分隔线 2px 纯黑，48px 宽
+- ✅ 列表项字体 17px，行高 1.9
+- ✅ 左侧 padding 70px
+- ❌ 这些你在 Markdown 里完全控制不了
+
+**一句话**：Markdown = 这页有什么内容和结构。type 指令 = 用哪个模板。模板文件 = 这些内容长什么样。改 Markdown 的排布（比如把列表放在标题前面），HTML 会跟着变。但想改标题字号、分隔线粗细——得去改模板文件。
+
+---
+
+## 内容如何填入模板 + SlideAST 是合同
+
+### 槽位填充模型
+
+模板定义了"这页有一个标题槽、一个列表槽、一个次级标题槽"。Markdown 提供了具体内容：标题="核心成果"，列表=["第一条","第二条"]，次级标题="关键里程碑"。两者组合成完整页面。
+
+```
+模板说：           我有一个标题槽、一个列表槽、一个次级标题槽
+Markdown 提供：    标题="核心成果"，列表=["第一条","第二条"]，次级标题="关键里程碑"
+                      ↓
+                 完整的页面
+```
+
+### 两者都遵循 SlideAST
+
+`types/ast.md` 是规范文档，`core/parser/index.js` 是执行。parser 按规范产出 SlideAST，模板按规范消费 SlideAST。改了 SlideAST 的结构，parser 和所有模板都得同步改——所以它是二者之间的**合同**。
+
+### 三层规范的关系
+
+| 规范 | 约束谁 | 在哪 |
+|------|--------|------|
+| Markdown 写法 | 用户 → parser | `types/markdown.md` |
+| SlideAST 结构 | parser → 模板 | `types/ast.md` |
+| SLIDE_DATA 结构 | AST → PPTX 导出 | `types/slide-data.md` |
+| 模板开发规范 | 开发者 | `types/template.md` |
