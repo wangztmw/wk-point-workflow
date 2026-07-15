@@ -43,20 +43,22 @@ function estLines(text, boxW, fontSize) {
   return Math.ceil(clean.length / cpl);
 }
 
-/** 估算 block 渲染高度（px），考虑文本实际体积 */
+/** 估算 block 渲染高度（px），考虑文本实际体积 + 安全边距 */
 function blockHeight(b, boxW) {
   const w = boxW || 840;
   const tag = b.tag;
   const s = b.style || {};
-  if (tag === 'h1')       return Math.max(36, (Number(s['font-size'])||32) * 1.3);
-  if (tag === 'h2')       return Math.max(30, (Number(s['font-size'])||24) * 1.3);
+  // 安全系数：PPT 渲染比 HTML 略占空间
+  const safety = 1.25;
+  if (tag === 'h1')       return Math.max(48, (Number(s['font-size'])||32) * 1.5 * safety);
+  if (tag === 'h2')       return Math.max(40, (Number(s['font-size'])||24) * 1.5 * safety);
   if (tag === 'h3' || tag === 'h4') {
-    return Math.max(24, (Number(s['font-size'])||16) * 1.3);
+    return Math.max(32, (Number(s['font-size'])||16) * 1.5 * safety);
   }
   if (tag === 'p') {
     const fs = Number(s['font-size']) || 13;
     const text = b.data?.text || '';
-    return Math.max(28, estLines(text, w, fs) * fs * 1.6 + 4);
+    return Math.max(36, estLines(text, w, fs) * fs * 1.7 * safety + 10);
   }
   if (tag === 'list') {
     const fs = Number(s['font-size']) || 12;
@@ -64,15 +66,15 @@ function blockHeight(b, boxW) {
     let totalH = 0;
     items.forEach(item => {
       const t = typeof item === 'string' ? item : (item.text || '');
-      totalH += Math.max(18, estLines(t, w - 20, fs) * fs * 1.6);
+      totalH += Math.max(24, estLines(t, w - 30, fs) * fs * 1.7 * safety + 4);
     });
-    return Math.max(items.length * 20, totalH + 4);
+    return Math.max(items.length * 26, totalH + 10);
   }
-  if (tag === 'img')      return 120;
-  if (tag === 'table')    return Math.max(((b.data?.rows || []).length + 1) * 22, 80);
-  if (tag === 'chart')    return 320;
-  if (tag === 'box')      return Number(s.h) || 4;
-  return 40;
+  if (tag === 'img')      return 140;
+  if (tag === 'table')    return Math.max(((b.data?.rows || []).length + 1) * 26, 100);
+  if (tag === 'chart')    return 340;
+  if (tag === 'box')      return (Number(s.h) || 4) * 1.2;
+  return 50;
 }
 
 /** blockHeight 的默认宽度版本（供 split/grid 使用） */
