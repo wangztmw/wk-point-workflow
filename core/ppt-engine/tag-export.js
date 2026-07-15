@@ -12,7 +12,7 @@ function fitChars(boxW, boxH, fs, lh) {
   return { cpl: cpl, maxLines: maxLines, total: cpl * maxLines };
 }
 
-// 多元素slide中的瀑布图：简单柱形渲染到已有slide
+// 多元素slide中的瀑布图：柱形+轴线+连接线渲染到已有slide
 function renderWaterfallBars(slide, rect, tbl) {
   var rows = tbl.rows || [];
   if (rows.length < 3) return;
@@ -20,13 +20,20 @@ function renderWaterfallBars(slide, rect, tbl) {
   var n = rawData.length;
   var barW = (rect.w - 0.2) / n * 0.55;
   var stepX = (rect.w - 0.2) / n;
-  var baseY = rect.y + rect.h - 0.3;
+  var baseY = rect.y + rect.h - 0.3;  // X轴位置
+  var chartBottom = baseY;
   // 计算Y范围
   var cumMax = rawData[0].value, cumVal = rawData[0].value;
   for (var i = 1; i < n - 1; i++) { cumVal += rawData[i].value; if (cumVal > cumMax) cumMax = cumVal; }
   var endV = rawData[n-1].value; if (endV > cumMax) cumMax = endV;
   var scale = (rect.h - 0.8) / (cumMax * 1.08 || 1);
-  var cumulative = rawData[0].value;  // 起始值，不是 0
+  var chartTop = baseY - cumMax * 1.08 * scale;
+  // 坐标轴线
+  slide.addShape('line', { x: rect.x + 0.1, y: baseY, w: rect.w - 0.2, h: 0, line: { color: 'DDDDDD', width: 0.8 } });  // X轴
+  slide.addShape('line', { x: rect.x + 0.1, y: chartTop, w: 0, h: baseY - chartTop, line: { color: 'DDDDDD', width: 0.8 } });  // Y轴
+  // 柱子 + 标签
+  var cumulative = rawData[0].value;
+  var prevTop = 0;  // 上一个柱顶的Y坐标（用于连接线）
   rawData.forEach(function(d, i){
     var cx = rect.x + 0.1 + i * stepX + (stepX - barW) / 2;
     var color, barH, barY;
@@ -47,9 +54,18 @@ function renderWaterfallBars(slide, rect, tbl) {
       cumulative += d.value;
     }
     if (barH < 0.05) barH = 0.05;
+    var barTop = i === n-1 ? barY : barY;  // 最后柱顶=barY，中间柱顶=barY
     slide.addShape('rect', { x: cx, y: barY, w: barW, h: barH, fill: { color: color }, rectRadius: 0.02 });
     slide.addText(d.name, { x: cx - stepX*0.15, y: baseY + 0.05, w: barW + stepX*0.3, h: 0.2, fontSize: 6, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
     slide.addText(String(d.value), { x: cx, y: barY - 0.18, w: barW, h: 0.15, fontSize: 7, color: color, align: 'center', fontFace: 'Microsoft YaHei', bold: true });
+    // 虚线连接：从前一个柱顶到当前柱顶
+    var curTop = barY;  // 当前柱顶Y
+    if (i > 0 && prevTop > 0) {
+      var prevCX = rect.x + 0.1 + (i-1) * stepX + stepX / 2;
+      var curCX = rect.x + 0.1 + i * stepX + stepX / 2;
+      slide.addShape('line', { x: prevCX, y: prevTop, w: curCX - prevCX, h: 0, line: { color: '999999', width: 1, dashType: 'dash' } });
+    }
+    prevTop = curTop;
   });
 }
 
