@@ -11,6 +11,9 @@ const { renderInline } = require('./elements/shared/inline');
 const headingEl = require('./elements/text/heading');
 const paragraphEl = require('./elements/text/paragraph');
 const listEl = require('./elements/text/list');
+const boxEl = require('./elements/visual/box');
+const imageEl = require('./elements/visual/image');
+const tableEl = require('./elements/data/table');
 
 function render(ast, config) {
   const { content } = ast;
@@ -42,49 +45,14 @@ function render(ast, config) {
       case 'list':
         return listEl.render(block.data.items, block.data.ordered, style);
 
-      case 'table': {
-        const table = block.data;
-        if (!table || !table.headers) return '';
-        const fp = styleToFontProps(style, 'table');
-        const headerRow = `<tr>${table.headers.map(h =>
-          `<th style="border-bottom:2px solid #1a1a1a;padding:4px 8px;font-size:${fp.fontSize}px;color:#${fp.color};font-weight:600;">${esc(h)}</th>`
-        ).join('')}</tr>`;
-        const dataRows = table.rows.map((row, ri) =>
-          `<tr>${row.map(c =>
-            `<td style="border-bottom:1px solid #e0e0e0;padding:4px 8px;font-size:${fp.fontSize-1}px;color:#555;">${esc(c)}</td>`
-          ).join('')}</tr>`
-        ).join('');
-        return `<div style="${posStyle};overflow:auto;">
-          <table style="width:100%;border-collapse:collapse;font-family:inherit;"><thead>${headerRow}</thead><tbody>${dataRows}</tbody></table>
-        </div>`;
-      }
+      case 'table':
+        return tableEl.render(block.data.headers, block.data.rows, style);
 
-      case 'img': {
-        const src = block.data.src || '';
-        const label = block.data.label || '';
-        const hasImage = src && src.length > 100;
-        const w = style.w || 400;
-        const h = style.h || 300;
-        if (hasImage) {
-          return `<div style="${posStyle};display:flex;align-items:center;justify-content:center;overflow:hidden;">
-            <img src="${esc(src)}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="${esc(label)}">
-          </div>`;
-        }
-        return `<div style="${posStyle};display:flex;align-items:center;justify-content:center;border:2px dashed #ddd;background:#fafafa;">
-          <div style="font-size:${Math.min(w,h)*0.04}px;font-weight:600;color:#999;text-align:center;">${esc(label)}</div>
-        </div>`;
-      }
+      case 'img':
+        return imageEl.render(block.data.src, block.data.label, style);
 
-      case 'box': {
-        const fillColor = style['fill-color'] || '';
-        const borderColor = style['border-color'] || '';
-        const borderWidth = style['border-width'] || 0;
-        const borderRadius = style['border-radius'] || 0;
-        const bg = fillColor ? `background:#${fillColor};` : '';
-        const bd = borderColor ? `border:${borderWidth}px solid #${borderColor};` : '';
-        const br = borderRadius ? `border-radius:${borderRadius}px;` : '';
-        return `<div style="${posStyle};${bg}${bd}${br}"></div>`;
-      }
+      case 'box':
+        return boxEl.render(style);
 
       case 'chart': {
         const chartType = style.chartType || style.type || 'bar';
