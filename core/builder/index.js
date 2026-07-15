@@ -189,12 +189,12 @@ async function buildProject(name, themePreset) {
     }
     if (foundImg) {
       try {
-        const { extract } = require('../styler/extract-bg');
+        const { extract } = require('../../styler/extract-bg');
         config.background = await extract(foundImg);
         // SVG 额外转为矢量图形
         var ext = path.extname(foundImg).toLowerCase();
         if (ext === '.svg') {
-          var { parse: parseSVG } = require('../styler/to-shapes');
+          var { parse: parseSVG } = require('../../styler/to-shapes');
           var svgText = fs.readFileSync(foundImg, 'utf-8');
           var shapeData = parseSVG(svgText);
           config.background.elements = shapeData.elements;
