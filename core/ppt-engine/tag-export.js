@@ -225,14 +225,15 @@ function addTagSlidePptx(pptx, s) {
         renderWaterfallBars(slide, rect, tbl2);
         return;
       }
-      // 其他图表 → 原生 addChart
+      // 其他图表 → 原生 addChart（PptxGenJS v3 需要 categories）
       var chartMap = { bar: 'BAR', pie: 'PIE', line: 'LINE', radar: 'RADAR' };
       var pptxType = chartMap[chartType] || 'BAR';
       try {
         slide.addChart(pptx.charts[pptxType], series, {
           x: rect.x, y: rect.y, w: rect.w, h: rect.h,
           catAxisLabelFontSize: 8, valAxisLabelFontSize: 8,
-          showValue: chartType === 'bar', chartColors: CHART_COLORS
+          showValue: chartType === 'bar', chartColors: CHART_COLORS,
+          catAxisLabelData: cats
         });
       } catch(e) {}
     }
