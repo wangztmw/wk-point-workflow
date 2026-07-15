@@ -33,8 +33,42 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
+/** 为布局类 slide（stack/grid/split）计算默认位置 */
+function layoutBlocks(ast) {
+  const blocks = ast.content.blocks || [];
+  const t = ast.type;
+  if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
+
+  let y = 0.4;
+  const gap = 0.1;
+  if (t === 'grid') {
+    const n = blocks.length;
+    const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
+    const cardW = 8.8 / cols, cardH = 4.0 / Math.ceil(n / cols);
+    return blocks.map((b, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      return { ...b, style: { ...(b.style || {}), x: (0.5 + col*(cardW+0.15)), y: (0.5 + row*(cardH+0.1)), w: cardW, h: cardH } };
+    });
+  }
+  if (t === 'split') {
+    const mid = Math.ceil(blocks.length / 2);
+    return blocks.map((b, i) => {
+      const isLeft = i < mid;
+      return { ...b, style: { ...(b.style||{}), x: isLeft ? 0.5 : 5.1, y: 0.5 + (isLeft?i:(i-mid))*0.6, w: 4.2, h: 0.5 } };
+    });
+  }
+  // stack: 垂直堆叠
+  return blocks.map(b => {
+    const h = (b.style && b.style.h) ? Number(b.style.h)/96 : 0.4;
+    const pos = { ...(b.style||{}), x: 0.6, y: y, w: 8.8, h: h };
+    y += h + gap;
+    return { ...b, style: pos };
+  });
+}
+
 function projectTag(ast) {
-  const blocks = ast.content.blocks.map(b => {
+  const rawBlocks = layoutBlocks(ast);
+  const blocks = rawBlocks.map(b => {
     let data;
     if (b.tag === 'img') {
       data = { src: b.data.src || '', label: b.data.label || '' };
