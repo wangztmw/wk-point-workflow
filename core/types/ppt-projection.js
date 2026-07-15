@@ -39,28 +39,30 @@ function layoutBlocks(ast) {
   const t = ast.type;
   if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
 
-  let y = 0.4;
-  const gap = 0.1;
+  // 所有值用像素（px），tag-export 会 pxToIn(x/96) 转英寸
+  const DPI = 96;
+  let y = 40;
+  const gap = 10;
   if (t === 'grid') {
     const n = blocks.length;
     const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
-    const cardW = 8.8 / cols, cardH = 4.0 / Math.ceil(n / cols);
+    const cardW = 850 / cols, cardH = 400 / Math.ceil(n / cols);
     return blocks.map((b, i) => {
       const col = i % cols, row = Math.floor(i / cols);
-      return { ...b, style: { ...(b.style || {}), x: (0.5 + col*(cardW+0.15)), y: (0.5 + row*(cardH+0.1)), w: cardW, h: cardH } };
+      return { ...b, style: { ...(b.style || {}), x: 50 + col*(cardW+15), y: 50 + row*(cardH+10), w: cardW, h: cardH } };
     });
   }
   if (t === 'split') {
     const mid = Math.ceil(blocks.length / 2);
     return blocks.map((b, i) => {
       const isLeft = i < mid;
-      return { ...b, style: { ...(b.style||{}), x: isLeft ? 0.5 : 5.1, y: 0.5 + (isLeft?i:(i-mid))*0.6, w: 4.2, h: 0.5 } };
+      return { ...b, style: { ...(b.style||{}), x: isLeft ? 50 : 500, y: 50 + (isLeft?i:(i-mid))*60, w: 420, h: 50 } };
     });
   }
   // stack: 垂直堆叠
   return blocks.map(b => {
-    const h = (b.style && b.style.h) ? Number(b.style.h)/96 : 0.4;
-    const pos = { ...(b.style||{}), x: 0.6, y: y, w: 8.8, h: h };
+    const h = (b.style && b.style.h) ? Number(b.style.h) : 40;
+    const pos = { ...(b.style||{}), x: 60, y: y, w: 840, h: h };
     y += h + gap;
     return { ...b, style: pos };
   });
