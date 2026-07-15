@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * summary.html.js — 总结/卡片页模板
  *
@@ -88,15 +89,15 @@ function render(ast, config) {
 
     return `
     <div class="summary-card" style="border-left: 4px solid ${borderColor};">
-      <h4 class="card-title">${escapeHTML(card.title)}</h4>
-      ${card.items.length > 0 ? `<ul class="card-list">${card.items.map(item => `<li>${escapeHTML(item)}</li>`).join('')}</ul>` : ''}
-      ${card.paragraphs.map(p => `<p class="card-text">${escapeHTML(p)}</p>`).join('')}
+      <h4 class="card-title">${esc(card.title)}</h4>
+      ${card.items.length > 0 ? `<ul class="card-list">${card.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
+      ${card.paragraphs.map(p => `<p class="card-text">${esc(p)}</p>`).join('')}
     </div>`;
   }).join('');
 
   return `
 <div class="slide slide-summary" style="background: var(--color-bg); padding: 36px 44px;">
-  <div class="section-title">${escapeHTML(title)}</div>
+  <div class="section-title">${esc(title)}</div>
   <div class="divider"></div>
   <div class="card-grid" style="display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 14px; margin-top: 4px;">
     ${cardsHTML}
@@ -115,9 +116,5 @@ function renderInlinePlain(nodes) {
   }).join('');
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 module.exports = { render };

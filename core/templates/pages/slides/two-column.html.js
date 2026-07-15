@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * two-column.html.js — 两栏布局模板
  *
@@ -49,9 +50,9 @@ function render(ast, config) {
     const borderColor = isLeft ? 'var(--color-primary)' : 'var(--color-accent)';
     return `
     <div class="column-card" style="border-left: 4px solid ${borderColor}; flex: 1; padding: 24px 24px; background: var(--color-bg-alt); border-radius: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-      <h4 style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee;">${escapeHTML(colTitle)}</h4>
-      ${items.length > 0 ? `<ul class="col-list">${items.map((item, idx) => `<li><span class="col-num">${String(idx+1).padStart(2,'0')}</span>${escapeHTML(item)}</li>`).join('')}</ul>` : ''}
-      ${paras.map(p => `<p style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 6px;">${escapeHTML(p)}</p>`).join('')}
+      <h4 style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee;">${esc(colTitle)}</h4>
+      ${items.length > 0 ? `<ul class="col-list">${items.map((item, idx) => `<li><span class="col-num">${String(idx+1).padStart(2,'0')}</span>${esc(item)}</li>`).join('')}</ul>` : ''}
+      ${paras.map(p => `<p style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 6px;">${esc(p)}</p>`).join('')}
     </div>`;
   }
 
@@ -59,7 +60,7 @@ function render(ast, config) {
 <div class="slide slide-two-col" style="background: var(--color-bg); padding: 40px 44px;">
   ${title ? `<div style="display:flex;align-items:stretch;gap:20px;margin-bottom:20px;">
     <div style="width:2px;flex-shrink:0;background:var(--color-primary);"></div>
-    <div class="section-title" style="margin-bottom:0;font-size:24px;font-weight:700;color:#1a1a1a;">${escapeHTML(title)}</div>
+    <div class="section-title" style="margin-bottom:0;font-size:24px;font-weight:700;color:#1a1a1a;">${esc(title)}</div>
   </div>` : ''}
   <div class="two-col-row" style="display: flex; gap: 0; flex: 1; min-height: 0;">
     ${buildColumn(leftTitle, leftItems, leftParas, true)}
@@ -80,9 +81,5 @@ function renderInlinePlain(nodes) {
   }).join('');
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 module.exports = { render };

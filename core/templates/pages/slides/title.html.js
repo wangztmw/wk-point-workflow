@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * title.html.js — 标题页（封面页）模板
  *
@@ -35,27 +36,20 @@ function render(ast, config) {
 
   // 生成标签 HTML
   const badgeHTML = badges.length > 0
-    ? `<div class="badge-row">${badges.map(b => `<span class="badge-tag">${escapeHTML(b)}</span>`).join('')}</div>`
+    ? `<div class="badge-row">${badges.map(b => `<span class="badge-tag">${esc(b)}</span>`).join('')}</div>`
     : '';
 
   return `
 <div class="slide slide-title" style="${bgStyle} color: ${textColor}; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
   <div class="main-title" style="font-size: 44px; font-weight: 800; letter-spacing: 2px; text-shadow: ${theme === 'light' ? 'none' : '0 2px 10px rgba(0,0,0,0.3)'}; margin-bottom: 16px; font-family: var(--font-heading);">
-    ${escapeHTML(mainTitle)}
+    ${esc(mainTitle)}
   </div>
   ${subTitle ? `<div class="sub-title" style="font-size: 22px; opacity: 0.9; font-weight: 300; margin-bottom: ${badges.length > 0 ? '24px' : '0'};">
-    ${escapeHTML(subTitle)}
+    ${esc(subTitle)}
   </div>` : ''}
   ${badgeHTML}
 </div>`;
 }
 
-function escapeHTML(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 module.exports = { render };

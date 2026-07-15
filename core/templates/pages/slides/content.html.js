@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * content.html.js — 内容/列表页模板
  *
@@ -18,7 +19,7 @@ function render(ast, config) {
     if (block.type === 'heading') {
       const h = block.data;
       if (h.level >= 3) {
-        contentHTML += `<h${h.level} class="slide-subheading">${escapeHTML(h.text)}</h${h.level}>`;
+        contentHTML += `<h${h.level} class="slide-subheading">${esc(h.text)}</h${h.level}>`;
       }
     } else if (block.type === 'list') {
       const list = block.data;
@@ -32,13 +33,13 @@ function render(ast, config) {
       contentHTML += `<p class="slide-para">${renderInline(p.inlineMarkup)}</p>`;
     } else if (block.type === 'image') {
       const img = block.data;
-      contentHTML += `<div class="slide-image-wrap"><img src="${escapeHTML(img.src)}" alt="${escapeHTML(img.alt || '')}" style="max-width:100%;max-height:350px;border-radius:8px;"/></div>`;
+      contentHTML += `<div class="slide-image-wrap"><img src="${esc(img.src)}" alt="${esc(img.alt || '')}" style="max-width:100%;max-height:350px;border-radius:8px;"/></div>`;
     }
   }
 
   return `
 <div class="slide slide-content" style="background: var(--color-bg); padding: 48px 70px;">
-  ${title ? `<div class="section-title" style="font-size:24px;font-weight:700;color:#1a1a1a;margin-bottom:10px;">${escapeHTML(title)}</div>
+  ${title ? `<div class="section-title" style="font-size:24px;font-weight:700;color:#1a1a1a;margin-bottom:10px;">${esc(title)}</div>
   <div class="divider"></div>` : ''}
   <div class="content-body">${contentHTML}</div>
 </div>`;
@@ -51,22 +52,14 @@ function renderInline(nodes) {
   if (!nodes || !Array.isArray(nodes)) return '';
   return nodes.map(node => {
     switch (node.type) {
-      case 'text': return escapeHTML(node.value);
+      case 'text': return esc(node.value);
       case 'bold': return `<strong>${renderInline(node.content)}</strong>`;
       case 'italic': return `<em>${renderInline(node.content)}</em>`;
-      case 'code': return `<code style="background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:3px;font-size:0.9em;">${escapeHTML(node.value)}</code>`;
+      case 'code': return `<code style="background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:3px;font-size:0.9em;">${esc(node.value)}</code>`;
       default: return '';
     }
   }).join('');
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
-module.exports = { render, renderInline, escapeHTML };
+module.exports = { render, renderInline };

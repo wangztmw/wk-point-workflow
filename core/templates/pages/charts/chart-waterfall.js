@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * chart-waterfall.js — 瀑布图（阶梯图/桥图）
  *
@@ -171,7 +172,7 @@ function render(ast, config) {
 function renderFallback(ast, msg) {
   const title = ast.props.title || ast.content.headings[0]?.text || '';
   return `<div class="slide slide-content" style="background: var(--color-bg); padding: 50px 70px;">
-  <div class="section-title">${escapeHTML(title)}</div>
+  <div class="section-title">${esc(title)}</div>
   <div class="divider"></div>
   <p style="color:#999;">（${msg || '数据不足'}）</p>
 </div>`;
@@ -221,9 +222,5 @@ function buildChartSlide(chartId, title, option, hLines, startVal, endVal, total
 <\/script>`;
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 module.exports = { render };

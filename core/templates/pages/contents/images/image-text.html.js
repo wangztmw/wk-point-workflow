@@ -1,3 +1,4 @@
+const { esc } = require('../../../elements/shared/escape');
 /**
  * image-text.html.js — 图文混排页（左右分栏）
  *
@@ -18,9 +19,9 @@ function render(ast, config) {
   const desc = content.paragraphs.map(p => p.text).join('<br>');
 
   const imageHTML = hasImage
-    ? `<img src="${escapeHTML(imgData.src)}" style="max-width:100%;max-height:440px;object-fit:contain;" alt="${escapeHTML(label)}">`
+    ? `<img src="${esc(imgData.src)}" style="max-width:100%;max-height:440px;object-fit:contain;" alt="${esc(label)}">`
     : `<div style="display:flex;align-items:center;justify-content:center;width:80%;height:60%;border:2px dashed #d0d0d0;background:#fafafa;">
-        <div style="font-size:16px;font-weight:600;color:#999;text-align:center;">${escapeHTML(label)}</div>
+        <div style="font-size:16px;font-weight:600;color:#999;text-align:center;">${esc(label)}</div>
       </div>`;
 
   return `<div class="slide slide-image-text" style="background:var(--color-bg);padding:40px 44px;display:flex;gap:28px;height:540px;box-sizing:border-box;">
@@ -28,11 +29,11 @@ function render(ast, config) {
     ${imageHTML}
   </div>
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding:8px 0;">
-    ${title ? `<div class="section-title" style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:8px;">${escapeHTML(title)}</div><div class="divider"></div>` : ''}
-    ${items.length > 0 ? `<ul class="slide-list">${items.map(i => `<li>${escapeHTML(i)}</li>`).join('')}</ul>` : ''}
+    ${title ? `<div class="section-title" style="font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:8px;">${esc(title)}</div><div class="divider"></div>` : ''}
+    ${items.length > 0 ? `<ul class="slide-list">${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
     ${desc ? `<p class="slide-para">${desc}</p>` : ''}
   </div>
 </div>`;
 }
-function escapeHTML(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 module.exports = { render };

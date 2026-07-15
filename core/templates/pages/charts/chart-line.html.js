@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * chart-line.html.js — 折线图模板
  *
@@ -85,7 +86,7 @@ function renderFallback(ast) {
   const title = ast.props.title || ast.content.headings[0]?.text || '';
   return `
 <div class="slide slide-content" style="background: var(--color-bg); padding: 50px 70px;">
-  <div class="section-title">${escapeHTML(title)}</div>
+  <div class="section-title">${esc(title)}</div>
   <div class="divider"></div>
   <p style="color:#999;font-size:15px;">（需要表格数据来生成图表）</p>
 </div>`;
@@ -113,9 +114,5 @@ function buildChartSlide(chartId, title, option) {
 <\/script>`;
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 module.exports = { render };

@@ -1,3 +1,4 @@
+const { esc } = require('../../elements/shared/escape');
 /**
  * chart-pareto.js — 帕累托图模板
  *
@@ -144,7 +145,7 @@ function render(ast, config) {
 function renderFallback(ast) {
   const title = ast.props.title || ast.content.headings[0]?.text || '';
   return `<div class="slide slide-content" style="background: var(--color-bg); padding: 50px 70px;">
-  <div class="section-title">${escapeHTML(title)}</div>
+  <div class="section-title">${esc(title)}</div>
   <div class="divider"></div>
   <p style="color:#999;">（需要表格数据来生成帕累托图）</p>
 </div>`;
@@ -175,9 +176,5 @@ function buildChartSlide(chartId, title, option, vitalFew, vitalPct) {
 <\/script>`;
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 module.exports = { render };
