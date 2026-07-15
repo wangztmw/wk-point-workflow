@@ -32,23 +32,23 @@ function render(rows, title, chartId, style, opts) {
       const v = Math.abs(d.value);
       baseSeries.push(0);
       increaseSeries.push({ value: v, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
-      decreaseSeries.push('-');
+      decreaseSeries.push(0);
       runningTotal = d.value;
       linePoints.push(runningTotal);
     } else if (i === rawData.length - 1) {
       baseSeries.push(0);
       increaseSeries.push({ value: d.value, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
-      decreaseSeries.push('-');
+      decreaseSeries.push(0);
       linePoints.push(d.value);
     } else {
       const delta = d.value;
       if (delta >= 0) {
         baseSeries.push(runningTotal);
         increaseSeries.push({ value: delta, itemStyle: { color: '#16A34A', borderRadius: [4, 4, 0, 0] } });
-        decreaseSeries.push('-');
+        decreaseSeries.push(0);
       } else {
         baseSeries.push(runningTotal + delta);
-        increaseSeries.push('-');
+        increaseSeries.push(0);
         decreaseSeries.push({ value: Math.abs(delta), itemStyle: { color: '#DC2626', borderRadius: [4, 4, 0, 0] } });
       }
       runningTotal += delta;
@@ -77,7 +77,7 @@ function render(rows, title, chartId, style, opts) {
     xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, color: '#666', rotate: cats.length > 6 ? 25 : 0 }, axisTick: { show: false } },
     yAxis: { type: 'value', max: yMax, axisLabel: { fontSize: 10, color: '#888' }, splitLine: { lineStyle: { color: '#f0f0f0' } } },
     series: [
-      { name: '底座', type: 'bar', stack: 'waterfall', data: baseSeries, itemStyle: { color: 'transparent' }, label: { show: false }, emphasis: { itemStyle: { color: 'transparent' } } },
+      { name: '底座', type: 'bar', stack: 'waterfall', data: baseSeries, itemStyle: { color: 'transparent', borderColor: 'transparent' }, label: { show: false }, emphasis: { itemStyle: { color: 'transparent' } } },
       { name: '增长', type: 'bar', stack: 'waterfall', data: increaseSeries,
         label: { show: true, position: 'top', fontSize: 9, color: '#10b981', formatter: function(p) { return ''; } } },
       { name: '减少', type: 'bar', stack: 'waterfall', data: decreaseSeries,
