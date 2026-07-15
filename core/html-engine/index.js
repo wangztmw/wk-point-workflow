@@ -61,6 +61,7 @@ const TEMPLATE_REGISTRY = {
   'image-full':    '../templates/contents/images/image-full.html.js',
   'image-grid':    '../templates/contents/images/image-grid.html.js',
   'image-gallery': '../templates/contents/images/image-gallery.js',
+  'tag-slide':     '../templates/tag-renderer.js',
 };
 
 /**
@@ -68,6 +69,9 @@ const TEMPLATE_REGISTRY = {
  * chart 类型会根据 props.chartType 进一步细分
  */
 function resolveTemplateName(ast) {
+  // 标签语法 → 通用绝对定位渲染器
+  if (ast.parser === 'tag') return 'tag-slide';
+
   if (ast.type === 'chart') {
     const ct = (ast.props.chartType || ast.props.type || 'bar').toLowerCase();
     // 映射到具体的 chart-* 模板
@@ -149,6 +153,11 @@ function mergeConfig(userConfig) {
  * 仅对 image-* 类型生效；已有有效 src 的图片不做覆盖
  */
 function resolveImageFromFolders(ast, projectDir) {
+  // 标签语法：遍历 blocks 中的 img 标签，扫描文件夹
+  if (ast.parser === 'tag') {
+    resolveTagImages(ast, projectDir);
+    return;
+  }
   const imageTypes = ['image-gallery', 'image-grid', 'image-text', 'image-full'];
   if (!projectDir || !imageTypes.includes(ast.type)) return;
 
@@ -204,6 +213,37 @@ function resolveImageFromFolders(ast, projectDir) {
   });
 
   ast.content.images = resolvedImages;
+}
+
+/** 标签语法：扫描 <img:标签名> 对应的 images/<标签名>/ 文件夹 */
+function resolveTagImages(ast, projectDir) {
+  const imagesDir = path.join(projectDir, 'images');
+  if (!fs.existsSync(imagesDir)) return;
+
+  for (const block of ast.content.blocks) {
+    if (block.tag !== 'img') continue;
+    const label = block.data.label;
+    if (!label) continue;
+    const folderPath = path.join(imagesDir, label);
+    if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+      const files = fs.readdirSync(folderPath).filter(f =>
+        /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f) && !f.startsWith('.')
+      );
+      if (files.length > 0) {
+        try {
+          const imgPath = path.join(folderPath, files[0]);
+          const data = fs.readFileSync(imgPath);
+          const ext = path.extname(files[0]).toLowerCase();
+          const mimeMap = { '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.gif': 'image/gif' };
+          const mime = mimeMap[ext] || 'image/jpeg';
+          block.data.src = `data:${mime};base64,${data.toString('base64')}`;
+        } catch (_) {}
+      }
+    }
+    // 同步到 content.images
+    if (!ast.content.images) ast.content.images = [];
+    ast.content.images.push(block.data);
+  }
 }
 
 function loadTemplates() {
@@ -279,6 +319,33 @@ function extractAllSlideData(slides, config) {
       type: ast.type,
       title: cleanMD(ast.props.title || (ast.content.headings[0]?.text || '')),
     };
+
+    // 标签语法 → blocks 原样透传
+    if (ast.parser === 'tag') {
+      const blocks = ast.content.blocks.map(b => {
+        let data;
+        if (b.tag === 'img') {
+          data = { src: b.data.src || '', label: b.data.label || '' };
+        } else if (b.tag === 'chart' || b.tag === 'table') {
+          data = { headers: b.data.headers, rows: b.data.rows };
+        } else if (b.tag === 'p') {
+          data = { text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) };
+        } else if (b.tag === 'list') {
+          data = {
+            ordered: b.data.ordered,
+            items: (b.data.items || []).map(item => ({
+              text: cleanMD(item.text || ''),
+              runs: toRuns(item.inlineMarkup),
+            })),
+          };
+        } else {
+          data = b.data; // h1-h4, box
+        }
+        return { tag: b.tag, style: b.style, data };
+      });
+      all.push({ ...base, parser: 'tag', blocks });
+      continue;
+    }
 
     if (ast.type === 'chart') {
       const table = ast.content.table;

@@ -1271,3 +1271,171 @@ headers: { 'Referer': 'https://image.baidu.com/', 'Accept': 'image/webp,image/*'
 - **点击缩略图是关键**：点击后页面 DOM 更新，才能获取到高清图
 - **`hd=1` 参数有效**：百度搜索 URL 加这个参数会返回高清结果
 - **脚本放到 `scripts/` 目录**：项目级工具脚本统一管理
+
+---
+
+## 标签化 Markdown 重构
+
+### 背景
+
+v9 之前，content.md 混用三种语法：`<!-- slide: type -->`（HTML 注释）、`# 标题`（Markdown）、`- 列表`（Markdown），风格不统一。图片标签 `<img:标签名>`（v9 引入）证明了标签化可行——把元素声明统一为 `<type: content; key: value>` 格式，清晰、可扩展、像素级定位。
+
+重构分两步走：
+1. **v9**：引入 `<img:标签名>` 替代列表项作为图片标签，占位符简化为纯文本
+2. **v10（本次）**：全部元素标签化 + AST 真相源建立
+
+### 标签格式规范
+
+```
+<type: content; key: value; key: value; ...>
+```
+
+- `type` = 元素类型（h1, h2, h3, h4, p, list, table, img, chart, box, slide）
+- `content` = 元素内容（第一个 `:` 到第一个 `;` 之间）
+- 之后 = 样式键值对，`;` 分隔，可任意扩展
+
+**多行内容**：标签声明占一行，数据跟在下面直到下一个标签或 slide 边界：
+
+```
+<list: ; type: bullet; x: 70; y: 120; w: 820; h: 180>
+- 要点一
+- 要点二
+
+<table: ; x: 50; y: 200; w: 860; h: 350>
+| 列A | 列B |
+|-----|-----|
+| 值1 | 值2 |
+```
+
+### 元素标签总表
+
+| 标签 | 内容位置 | 替代 |
+|------|---------|------|
+| `<slide: type; ...>` | 行内 | `<!-- slide: type, key=value -->` |
+| `<h1:>` ~ `<h4:>` | 行内 | `# ~ #### 标题` |
+| `<p:>` | 行内或多行 | 裸段落 |
+| `<list: ; type: bullet\|ordered>` | 多行 | `- 条目` / `1. 条目` |
+| `<table:>` | 多行 | `\| 表格 \|` |
+| `<img: 标签名>` | 行内 | `![alt](url)` + 文件夹驱动 |
+| `<chart: 类型>` | 多行 | `<!-- slide: chart -->` + 表格 |
+| `<box:>` | 行内 | 新增（装饰矩形/容器） |
+
+**保留不变**：`---` 幻灯片分隔符；`**粗体**` `*斜体*` `` `代码` `` 行内标记；`images/<标签名>/` 文件夹驱动图片。
+
+### 样式框架
+
+**核心定位**：x, y, w, h（像素），画布 960×540px → PPT 转换除以 96 得英寸。
+
+**外观参数**（按需选用，可任意扩展）：font-size, color, bold, italic, align, fill-color, border-color, border-width, border-radius, type。
+
+**扩展机制**：解析器原样存储所有 key:value 对，不识别的键被模板/PPT 引擎忽略。加新样式维度不需要改解析器。
+
+### 架构：并行解析器
+
+```
+content.md
+    │
+    ├── detectTagSyntax() → 扫前 500 字符找 <slide: 或 <h1:
+    │
+    ├── 有标签 → parseTag()  (tag-parser.js, 新建)
+    └── 无标签 → parse()     (parser/index.js, 不动)
+                    │
+                    ▼
+               SlideAST  ← 同一份合同
+                    │
+         ┌─────────┴──────────┐
+         ▼                    ▼
+    html-engine           ppt-engine
+    if parser==='tag'     if s.parser==='tag'
+    → tag-renderer        → addTagSlidePptx
+    else                  else
+    → 20个老模板           → 6个老模块
+```
+
+**关键设计**：分支在入口，不在内部。html-engine 的 `resolveTemplateName()` 和 ppt-engine 的 `buildPptxFromSlideData()` 各加一行 `if (parser === 'tag')`。老逻辑一行不动。
+
+### 新增/修改文件清单
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 新建 | `core/utils/coordinates.js` | px↔inch 转换 |
+| 新建 | `core/parser/tag-parser.js` | 标签解析器 |
+| 新建 | `core/templates/tag-renderer.js` | 通用绝对定位 HTML 渲染 |
+| 新建 | `core/ppt-engine/tag-export.js` | 标签语法 PPT 导出 |
+| 新建 | `projects/demo-tag/` | 标签语法示例项目 |
+| 小改 | `core/parser/index.js` | +require AST + 所有对象字面量→工厂 |
+| 小改 | `core/html-engine/index.js` | +tag-slide 注册/路由/图片解析/数据提取 |
+| 小改 | `core/ppt-engine/core.js` | +tag dispatch |
+| 小改 | `core/ppt-engine/script.js` | +require tag-export |
+| 小改 | `core/builder/index.js` | +自动检测/路由 |
+| 修复 | `core/ppt-engine/image.js` | 补 addKpiGridSlidePptx 缺失的 `}` |
+
+**20 个老模板、4 个旧项目 → 一行没动。**
+
+### 踩坑：导出按钮失效
+
+**现象**：浏览器点击"导出 PPTX"无反应。
+
+**根因 1**：`tag-export.js` 在浏览器端调用了 `toRuns()`，但该函数只在 Node.js（html-engine）存在。修复：`extractAllSlideData()` 预计算 runs，浏览器直接用。
+
+**根因 2（更深层）**：`image.js` 的 `addKpiGridSlidePptx` 函数缺闭合 `}`。这个 bug 一直存在（kpi-grid 类型没人用过），但缺失的括号导致整个浏览器脚本解析失败，导出按钮全局失效。
+
+**教训**：ppt-engine 各模块通过模板字符串拼接成浏览器脚本。一个模块的语法错误会让整个脚本瘫痪，影响所有幻灯片类型，不只是出错的类型。加新模块后必须验证全脚本 `brace depth === 0`。
+
+### 设计决策记录
+
+1. **为什么两个解析器而不是替换？** → 旧项目不需要迁移，新项目可立即用新语法。两个解析器产出同一个 AST，下游无感知。
+
+2. **为什么 tag 渲染不共享老模板？** → 老模板用 CSS 流式布局，标签用绝对定位。哲学不同，硬合并会绑死手脚。等标签成熟后，让老解析器也产出带默认 style 的 blocks，老模板逐步退役。
+
+3. **为什么 style 值是字符串？** → 解析器不关心值的类型，透传给消费端。数字、颜色、布尔都存为字符串，消费端自行解析。这让解析器保持零配置。
+
+4. **为什么 toRuns 在 Node.js 预计算？** → InlineNode 是嵌套 JS 对象，不能直接 JSON.stringify。在 Node.js 端转成 PptxGenJS 兼容的 `[{text, options}]` 格式后嵌入 SLIDE_DATA。
+
+---
+
+## AST 真相源重构
+
+### 背景
+
+v10 之前，AST 结构定义散落在三处：`parser/index.js` 的 JSDoc（过时）、`types/ast.md`（纯文档）、`html-engine` 的消费代码（隐式约定）。没有一个地方能完整回答"AST 长什么样"。
+
+### 解决方案：`types/ast.js`
+
+一个可执行的 JS 模块作为 AST 唯一真相源，包含三层：
+
+**常量**（所有合法枚举值）：
+```js
+SLIDE_TYPES   // 16 种幻灯片类型
+CHART_TYPES   // 8 种图表子类型
+BLOCK_TYPES   // 7 种块类型（heading/paragraph/list/table/image/image-tag/box）
+INLINE_TYPES  // 4 种行内标记（text/bold/italic/code）
+```
+
+**工厂函数**（14 个）：`createSlide()` `createContent()` `createHeading()` `createParagraph()` `createList()` `createListItem()` `createTable()` `createImageTag()` `createImageMarkdown()` `createBox()` `createBlock()` `createBlockLegacy()` `createInlineText/Bold/Italic/Code()`
+
+**校验函数**（2 个）：`validateSlide(ast)` `validateBlock(block)` → `{valid, errors}`
+
+### 波及面
+
+| 文件 | 改动 |
+|------|------|
+| `types/ast.js` | **新建**（~180 行） |
+| `core/parser/index.js` | 所有对象字面量 → 调工厂函数；删掉过时 JSDoc |
+| `core/parser/tag-parser.js` | 同上，所有对象字面量 → 工厂 |
+| `types/ast.md` | **删除**（内容已搬入 ast.js） |
+
+### 设计原则
+
+**AST 是合同**。parser 生产 AST 时通过工厂函数保证结构正确，html-engine 和 ppt-engine 消费 AST 时可通过校验函数检查输入。合同条款在一个文件（`types/ast.js`）里，人和机器都能读到。
+
+### 总结
+
+这次重构的核心变化是 **从约定到代码**：
+
+- **标签化 Markdown**：所有元素统一 `<type: content; key: value>` 语法，像素级定位，HTML 和 PPT 坐标同一来源
+- **AST 真相源**：`types/ast.js` 是唯一真相，parser 通过工厂函数构造节点，不再写裸对象字面量
+- **并行架构**：新旧解析器共存，通过 `detectTagSyntax()` 自动路由，下游通过 `parser` 字段分流，老代码一行不动
+- **可扩展样式**：加新样式参数不需要改解析器，模板和 PPT 引擎按需读取
+
+改动量：新建 6 个文件，小改 7 个文件，删除 1 个文件。老模板和旧项目完全不受影响。

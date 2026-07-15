@@ -72,6 +72,7 @@ function buildPptxFromSlideData() {
   pptx.defineLayout({ name: 'C16x9', width: 10, height: 5.625 });
   pptx.layout = 'C16x9';
   SLIDE_DATA.forEach(function(s) {
+    if (s.parser === 'tag')           { addTagSlidePptx(pptx, s); return; }
     if (s.type === 'title')           addTitleSlidePptx(pptx, s);
     else if (s.type === 'content')    addContentSlidePptx(pptx, s);
     else if (s.type === 'summary')    addSummarySlidePptx(pptx, s);

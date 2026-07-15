@@ -50,7 +50,7 @@ function render(ast, config) {
 
     // 占位框：虚线边框 + 标签文本
     return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div style="width:${cellW}px;height:${imgH}px;display:flex;align-items:center;justify-content:center;border:2px dashed #d0d0d0;border-radius:8px;background:#fafafa;">
+      <div style="width:${cellW}px;height:${imgH}px;display:flex;align-items:center;justify-content:center;border:2px dashed #d0d0d0;background:#fafafa;">
         <div style="font-size:13px;font-weight:600;color:#999;text-align:center;max-width:${cellW - 20}px;line-height:1.3;">${escapeHTML(label)}</div>
       </div>
       ${label ? `<div style="font-size:11px;color:#999;margin-top:4px;text-align:center;max-width:${cellW}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(label)}</div>` : ''}

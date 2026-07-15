@@ -25,6 +25,7 @@ function addKpiGridSlidePptx(pptx, s) {
     slide.addText(kpi.label, { x: cx + 0.3, y: cy + 1.0, w: 3.8, h: 0.4, fontSize: 12, color: '888888', fontFace: 'Microsoft YaHei' });
     if (kpi.trend) slide.addText(kpi.trend, { x: cx + 0.3, y: cy + 1.35, w: 3.8, h: 0.35, fontSize: 13, bold: true, color: (kpi.trend.startsWith('+')||kpi.trend.startsWith('↑'))?'16A34A':'DC2626', fontFace: 'Microsoft YaHei' });
   });
+}
 
 function addImageGallerySlidePptx(pptx, s) {
   var slide = pptx.addSlide();

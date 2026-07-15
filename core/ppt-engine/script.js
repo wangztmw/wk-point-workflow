@@ -14,8 +14,9 @@ function generate(params) {
   const text    = require('./text-layout');
   const table   = require('./table');
   const image   = require('./image');
+  const tagexport = require('./tag-export');
 
-  let code = [core, waterfall, chart, text, table, image].join('\n');
+  let code = [core, waterfall, chart, text, table, image, tagexport].join('\n');
 
   // 占位符替换（browser-code.txt 中残留的）
   code = code.replace(/__SLIDE_DATA__/g, params.slideDataJSON);

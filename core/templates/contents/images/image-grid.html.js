@@ -27,7 +27,7 @@ function render(ast, config) {
     }
 
     return `<div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="width:100%;height:170px;display:flex;align-items:center;justify-content:center;border:2px dashed #d0d0d0;border-radius:8px;background:#fafafa;">
+      <div style="width:100%;height:170px;display:flex;align-items:center;justify-content:center;border:2px dashed #d0d0d0;background:#fafafa;">
         <div style="font-size:13px;font-weight:600;color:#999;text-align:center;max-width:90%;">${escapeHTML(label)}</div>
       </div>
       ${label ? `<div style="font-size:12px;color:#999;margin-top:6px;text-align:center;">${escapeHTML(label)}</div>` : ''}

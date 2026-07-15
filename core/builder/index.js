@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parse } = require('../parser');
+const { parse, parseTag, detectTagSyntax } = require('../parser');
 const { render } = require('../html-engine');
 
 const PROJECTS_DIR = path.join(__dirname, '..', '..', 'projects');
@@ -216,9 +216,10 @@ async function buildProject(name, themePreset) {
     console.log(`   🎨 应用主题: ${themePreset}`);
   }
 
-  // 4. 解析 Markdown
-  const slides = parse(md);
-  console.log(`   📊 解析完成: ${slides.length} 页幻灯片`);
+  // 4. 解析 Markdown（自动检测标签语法 vs 传统 Markdown）
+  const useTag = detectTagSyntax(md);
+  const slides = useTag ? parseTag(md) : parse(md);
+  console.log(`   📊 解析完成: ${slides.length} 页幻灯片 (${useTag ? 'tag' : 'markdown'} 语法)`);
 
   const typeCount = {};
   slides.forEach(s => {

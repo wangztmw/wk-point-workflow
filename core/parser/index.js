@@ -10,6 +10,8 @@
  * 纯 JavaScript，零依赖，约 250 行。
  */
 
+const AST = require('../../types/ast');
+
 // ============================================================
 // 1. 主入口
 // ============================================================
@@ -100,12 +102,7 @@ function parseSlide(raw, index) {
     if (h) props.title = stripFormatting(h.text);
   }
 
-  return {
-    type,
-    props,
-    content,
-    index,
-  };
+  return AST.createSlide({ type, props, content, index });
 }
 
 // ============================================================
@@ -150,14 +147,8 @@ function extractDirective(text) {
  */
 function parseContent(text) {
   const lines = text.split('\n');
-  const content = {
-    headings: [],
-    paragraphs: [],
-    lists: [],
-    table: null,
-    blocks: [],      // ★ 保留原始顺序: [{type:'heading',data:{...}}, {type:'list',data:{...}},...]
-    raw: text,
-  };
+  const content = AST.createContent();
+  content.raw = text;
 
   let i = 0;
   while (i < lines.length) {
@@ -173,9 +164,9 @@ function parseContent(text) {
     // 标题
     const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)/);
     if (headingMatch) {
-      const h = { level: headingMatch[1].length, text: headingMatch[2] };
+      const h = AST.createHeading(headingMatch[1].length, headingMatch[2]);
       content.headings.push(h);
-      content.blocks.push({ type: 'heading', data: h });
+      content.blocks.push(AST.createBlockLegacy('heading', h));
       i++;
       continue;
     }
@@ -184,7 +175,7 @@ function parseContent(text) {
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       content.table = parseTable(lines, i);
       if (content.table) {
-        content.blocks.push({ type: 'table', data: content.table });
+        content.blocks.push(AST.createBlockLegacy('table', content.table));
         i += 2 + content.table.rows.length;
         continue;
       }
@@ -194,7 +185,7 @@ function parseContent(text) {
     if (trimmed.match(/^[-*]\s+/)) {
       const { list, consumed } = parseUnorderedList(lines, i);
       content.lists.push(list);
-      content.blocks.push({ type: 'list', data: list });
+      content.blocks.push(AST.createBlockLegacy('list', list));
       i += consumed;
       continue;
     }
@@ -203,7 +194,7 @@ function parseContent(text) {
     if (trimmed.match(/^\d+\.\s+/)) {
       const { list, consumed } = parseOrderedList(lines, i);
       content.lists.push(list);
-      content.blocks.push({ type: 'list', data: list });
+      content.blocks.push(AST.createBlockLegacy('list', list));
       i += consumed;
       continue;
     }
@@ -212,9 +203,9 @@ function parseContent(text) {
     const imgTagMatch = trimmed.match(/^<img:(.+?)>$/);
     if (imgTagMatch) {
       content.images = content.images || [];
-      const img = { label: imgTagMatch[1].trim(), src: '' };
+      const img = AST.createImageTag(imgTagMatch[1].trim());
       content.images.push(img);
-      content.blocks.push({ type: 'image-tag', data: img });
+      content.blocks.push(AST.createBlockLegacy('image-tag', img));
       i++;
       continue;
     }
@@ -223,9 +214,9 @@ function parseContent(text) {
     const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imageMatch) {
       content.images = content.images || [];
-      const img = { alt: imageMatch[1], src: imageMatch[2] };
+      const img = AST.createImageMarkdown(imageMatch[1], imageMatch[2]);
       content.images.push(img);
-      content.blocks.push({ type: 'image', data: img });
+      content.blocks.push(AST.createBlockLegacy('image', img));
       i++;
       continue;
     }
@@ -234,7 +225,7 @@ function parseContent(text) {
     const { paragraph, consumed } = parseParagraph(lines, i);
     if (paragraph) {
       content.paragraphs.push(paragraph);
-      content.blocks.push({ type: 'paragraph', data: paragraph });
+      content.blocks.push(AST.createBlockLegacy('paragraph', paragraph));
     }
     i += consumed;
 
@@ -282,7 +273,7 @@ function parseTable(lines, startIdx) {
 
   if (rows.length === 0) return null;
 
-  return { headers, rows };
+  return AST.createTable(headers, rows);
 }
 
 function parseUnorderedList(lines, startIdx) {
@@ -293,12 +284,12 @@ function parseUnorderedList(lines, startIdx) {
     const trimmed = lines[i].trim();
     const match = trimmed.match(/^[-*]\s+(.+)/);
     if (!match) break;
-    items.push({ text: match[1], inlineMarkup: parseInline(match[1]) });
+    items.push(AST.createListItem(match[1], parseInline(match[1])));
     i++;
   }
 
   return {
-    list: { type: 'list', ordered: false, items },
+    list: AST.createList(false, items),
     consumed: i - startIdx,
   };
 }
@@ -311,12 +302,12 @@ function parseOrderedList(lines, startIdx) {
     const trimmed = lines[i].trim();
     const match = trimmed.match(/^\d+\.\s+(.+)/);
     if (!match) break;
-    items.push({ text: match[1], inlineMarkup: parseInline(match[1]) });
+    items.push(AST.createListItem(match[1], parseInline(match[1])));
     i++;
   }
 
   return {
-    list: { type: 'list', ordered: true, items },
+    list: AST.createList(true, items),
     consumed: i - startIdx,
   };
 }
@@ -344,11 +335,7 @@ function parseParagraph(lines, startIdx) {
 
   const text = paraLines.join('\n').trim();
   return {
-    paragraph: {
-      type: 'paragraph',
-      text,
-      inlineMarkup: parseInline(text),
-    },
+    paragraph: AST.createParagraph(text, parseInline(text)),
     consumed: i - startIdx,
   };
 }
@@ -384,7 +371,7 @@ function parseInline(text) {
     if (matches.length === 0) {
       // 没有更多标记，剩余都是普通文本
       if (pos < remaining.length) {
-        nodes.push({ type: 'text', value: remaining.slice(pos) });
+        nodes.push(AST.createInlineText(remaining.slice(pos)));
       }
       break;
     }
@@ -393,18 +380,18 @@ function parseInline(text) {
 
     // 标记前的普通文本
     if (m.start > pos) {
-      nodes.push({ type: 'text', value: remaining.slice(pos, m.start) });
+      nodes.push(AST.createInlineText(remaining.slice(pos, m.start)));
     }
 
     // 标记内容
     if (m.type === 'bold') {
-      nodes.push({ type: 'bold', content: [{ type: 'text', value: m.match[1] }] });
+      nodes.push(AST.createInlineBold(m.match[1]));
       pos = m.start + m.match[0].length;
     } else if (m.type === 'italic') {
-      nodes.push({ type: 'italic', content: [{ type: 'text', value: m.match[1] }] });
+      nodes.push(AST.createInlineItalic(m.match[1]));
       pos = m.start + m.match[0].length;
     } else if (m.type === 'code') {
-      nodes.push({ type: 'code', value: m.match[1] });
+      nodes.push(AST.createInlineCode(m.match[1]));
       pos = m.start + m.match[0].length;
     }
   }
@@ -447,28 +434,8 @@ function stripFormatting(text) {
 // ============================================================
 
 module.exports = { parse, parseSlide, splitSlides, parseContent, parseInline, stripFormatting };
+// 标签解析器（独立模块，无循环依赖）
+module.exports.parseTag = require('./tag-parser').parse;
+module.exports.detectTagSyntax = require('./tag-parser').detectTagSyntax;
 
-// ============================================================
-// 10. 类型定义（文档参考）
-// ============================================================
-/**
- * @typedef {Object} SlideAST
- * @property {string} type - 幻灯片类型: title | content | chart | summary | two-column
- * @property {Object} props - 属性键值对（来自 HTML 注释）
- * @property {string} [props.title] - 幻灯片标题
- * @property {string} [props.chartType] - 图表类型: bar | pie | line | radar
- * @property {SlideContent} content - 解析后的内容
- * @property {number} index - 幻灯片序号 (0-based)
- *
- * @typedef {Object} SlideContent
- * @property {Array<{level:number, text:string}>} headings
- * @property {Array<{type:string, text:string, inlineMarkup:Array}>} paragraphs
- * @property {Array<{type:string, ordered:boolean, items:Array}>} lists
- * @property {{headers:string[], rows:string[][]}|null} table
- * @property {string} raw
- *
- * @typedef {Object} InlineNode
- * @property {string} type - text | bold | italic | code | link
- * @property {string} [value]
- * @property {Array<InlineNode>} [content]
- */
+// AST 类型定义已迁移至 types/ast.js（唯一真相源）

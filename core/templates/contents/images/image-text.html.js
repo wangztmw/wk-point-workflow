@@ -19,7 +19,7 @@ function render(ast, config) {
 
   const imageHTML = hasImage
     ? `<img src="${escapeHTML(imgData.src)}" style="max-width:100%;max-height:440px;object-fit:contain;" alt="${escapeHTML(label)}">`
-    : `<div style="display:flex;align-items:center;justify-content:center;width:80%;height:60%;border:2px dashed #d0d0d0;border-radius:8px;background:#fafafa;">
+    : `<div style="display:flex;align-items:center;justify-content:center;width:80%;height:60%;border:2px dashed #d0d0d0;background:#fafafa;">
         <div style="font-size:16px;font-weight:600;color:#999;text-align:center;">${escapeHTML(label)}</div>
       </div>`;
 
