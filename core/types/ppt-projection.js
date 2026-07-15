@@ -77,32 +77,16 @@ function blockHeight(b, boxW) {
   return 50;
 }
 
-/** 为布局 slide 标记列位置（_lx/_lw），高度由 tag-export 动态计算 */
+const { stackPositions, splitPositions, gridPositions } = require('../../templates/layouts/_positions');
+
+/** 为布局 slide 计算精确位置（HTML 和 PPT 共用 _positions.js） */
 function layoutBlocks(ast) {
   const blocks = ast.content.blocks || [];
   const t = ast.type;
-  if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
-
-  if (t === 'stack') return blocks.map(b => ({ ...b, style: { ...(b.style||{}), _lx: 60, _lw: 840 } }));
-
-  if (t === 'split') {
-    const n = blocks.length;
-    let mid = Math.ceil(n / 2);
-    for (let tryMid = mid; tryMid > 0; tryMid--) {
-      const prev = blocks[tryMid - 1], cur = blocks[tryMid];
-      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
-      mid = tryMid; break;
-    }
-    return blocks.map((b, i) => ({ ...b, style: { ...(b.style||{}), _lx: i < mid ? 50 : 500, _lw: 420 } }));
-  }
-
-  if (t === 'grid') {
-    const n = blocks.length;
-    const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
-    const cardW = 850 / cols;
-    return blocks.map((b, i) => ({ ...b, style: { ...(b.style||{}), _lx: 50 + (i%cols)*(cardW+15), _lw: cardW } }));
-  }
-
+  const startY = ast.props.title ? 70 : 60;
+  if (t === 'stack') return stackPositions(blocks, startY);
+  if (t === 'split') return splitPositions(blocks, startY);
+  if (t === 'grid')  return gridPositions(blocks, startY);
   return blocks;
 }
 
