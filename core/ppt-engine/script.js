@@ -29,6 +29,7 @@ function generate(params) {
   code = code.replace(/__EMBED_FONTS__/g, String(params.autoEmbedFonts));
   code = code.replace(/__CHART_COUNT__/g, String(params.chartSlidesLen));
   code = code.replace(/__CHART_COUNT_VAL__/g, String(params.chartSlidesLen));
+  code = code.replace(/__DARK_TYPES__/g, params.darkTypesJSON || '[]');
 
   return '<script>\n' + code + '\n</script>';
 }

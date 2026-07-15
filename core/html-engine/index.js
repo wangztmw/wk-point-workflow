@@ -135,7 +135,8 @@ function resolveImageFromFolders(ast, projectDir) {
     resolveTagImages(ast, projectDir);
     return;
   }
-  const imageTypes = ['image-gallery', 'image-grid', 'image-text', 'image-full'];
+  const { IMAGE_SLIDE_TYPES } = require('../../types/projection');
+  const imageTypes = IMAGE_SLIDE_TYPES;
   if (!projectDir || !imageTypes.includes(ast.type)) return;
 
   const imagesDir = path.join(projectDir, 'images');
@@ -270,6 +271,8 @@ function generateThemeCSS(config) {
  * 供浏览器端 PptxGenJS 原生图表导出使用
  */
 function cleanMD(s) { return (s||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`([^`]+)`/g,'$1'); }
+// Note: cleanMD 和 toRuns 仍保留本地副本用于 base.title 提取；
+// 类型投影逻辑已移至 types/projection.js
 
 /** 将 parser 的 inlineMarkup 节点转为 PptxGenJS 富文本 runs */
 function toRuns(nodes) {
@@ -288,6 +291,7 @@ function toRuns(nodes) {
 }
 
 function extractAllSlideData(slides, config) {
+  const { PROJECTION } = require('../../types/projection');
   const all = [];
 
   for (const ast of slides) {
@@ -297,147 +301,11 @@ function extractAllSlideData(slides, config) {
       title: cleanMD(ast.props.title || (ast.content.headings[0]?.text || '')),
     };
 
-    // 标签语法 → blocks 原样透传
-    if (ast.parser === 'tag') {
-      const blocks = ast.content.blocks.map(b => {
-        let data;
-        if (b.tag === 'img') {
-          data = { src: b.data.src || '', label: b.data.label || '' };
-        } else if (b.tag === 'chart' || b.tag === 'table') {
-          data = { headers: b.data.headers, rows: b.data.rows };
-        } else if (b.tag === 'p') {
-          data = { text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) };
-        } else if (b.tag === 'list') {
-          data = {
-            ordered: b.data.ordered,
-            items: (b.data.items || []).map(item => ({
-              text: cleanMD(item.text || ''),
-              runs: toRuns(item.inlineMarkup),
-            })),
-          };
-        } else {
-          data = b.data; // h1-h4, box
-        }
-        return { tag: b.tag, style: b.style, data };
-      });
-      all.push({ ...base, parser: 'tag', blocks });
-      continue;
-    }
-
-    if (ast.type === 'chart') {
-      const table = ast.content.table;
-      if (!table || !table.headers || table.headers.length < 2) {
-        all.push(base);
-        continue;
-      }
-      const chartType = (ast.props.chartType || ast.props.type || 'bar').toLowerCase();
-      const categories = table.rows.map(row => row[0]);
-      const series = [];
-      for (let col = 1; col < table.headers.length; col++) {
-        series.push({ name: table.headers[col], values: table.rows.map(row => parseFloat(row[col]) || 0) });
-      }
-      all.push({ ...base, type: 'chart', chartType: chartType, categories, series });
-    } else if (ast.type === 'title') {
-      const subtitle = cleanMD(ast.content.headings[1]?.text || '');
-      all.push({ ...base, subtitle });
-    } else if (ast.type === 'content') {
-      // 用 blocks 保留 Markdown 原始顺序（小标题和列表可能穿插）
-      const ordered = [];
-      for (const b of (ast.content.blocks || [])) {
-        if (b.type === 'heading' && b.data.level >= 3) {
-          ordered.push({ kind: 'heading', level: b.data.level, text: cleanMD(b.data.text) });
-        } else if (b.type === 'list') {
-          for (const item of b.data.items) {
-            ordered.push({ kind: 'item', text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
-          }
-        } else if (b.type === 'paragraph') {
-          ordered.push({ kind: 'para', text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) });
-        }
-      }
-      all.push({ ...base, ordered });
-    } else if (ast.type === 'summary') {
-      // 用 blocks 保留 H3 和列表的配对关系（每遇 H3 开新卡片，后续列表归它）
-      const cards = [];
-      for (const b of (ast.content.blocks || [])) {
-        if (b.type === 'heading' && b.data.level >= 3) {
-          cards.push({ title: cleanMD(b.data.text), items: [] });
-        } else if (b.type === 'list' && cards.length > 0) {
-          for (const item of b.data.items) {
-            cards[cards.length - 1].items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
-          }
-        }
-      }
-      all.push({ ...base, cards });
-    } else if (ast.type === 'two-column') {
-      const h3s = ast.content.headings.filter(h => h.level >= 3);
-      const allItems = [];
-      for (const list of ast.content.lists) {
-        for (const item of list.items) allItems.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
-      }
-      const mid = Math.ceil(allItems.length / 2);
-      all.push({
-        ...base,
-        left: { title: cleanMD(h3s[0]?.text || '左栏'), items: allItems.slice(0, mid) },
-        right: { title: cleanMD(h3s[1]?.text || '右栏'), items: allItems.slice(mid) },
-      });
-    } else if (ast.type === 'toc') {
-      const items = ast.content.headings.filter(h => h.level >= 2).map(h => h.text);
-      all.push({ ...base, items });
-    } else if (ast.type === 'section') {
-      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '' });
-    } else if (ast.type === 'table') {
-      const table = ast.content.table;
-      all.push({ ...base, headers: table ? table.headers : [], rows: table ? table.rows : [] });
-    } else if (ast.type === 'ending') {
-      all.push({ ...base, contact: ast.content.paragraphs.map(p => p.text).join('  |  ') });
-    } else if (ast.type === 'quote') {
-      const author = ast.content.headings[1]?.text || (ast.content.paragraphs[0]?.text || '');
-      all.push({ ...base, quote: base.title, author });
-    } else if (ast.type === 'three-column') {
-      const h3s = ast.content.headings.filter(h => h.level >= 3);
-      const allItems = []; for (const list of ast.content.lists) for (const item of list.items) allItems.push(item.text || '');
-      const per = Math.ceil(allItems.length / 3);
-      const cols = [0,1,2].map(i => ({ title: h3s[i]?.text || '', items: allItems.slice(i*per, (i+1)*per) }));
-      all.push({ ...base, cols });
-    } else if (ast.type === 'kpi-grid') {
-      const table = ast.content.table;
-      const kpis = table ? table.rows.slice(0,4).map(r => ({ label: r[0], value: r[1]||'', trend: r[2]||'' })) : [];
-      all.push({ ...base, kpis });
-    } else if (ast.type === 'image-text') {
-      const items = []; for (const list of ast.content.lists) for (const item of list.items) items.push(item.text || '');
-      const imgData = (ast.content.images && ast.content.images[0]) ? ast.content.images[0] : { src: '', label: '' };
-      all.push({ ...base, items, imgSrc: imgData.src, imgLabel: imgData.label });
-    } else if (ast.type === 'image-full') {
-      const imgData = (ast.content.images && ast.content.images[0]) ? ast.content.images[0] : { src: '', label: '' };
-      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '', imgSrc: imgData.src, imgLabel: imgData.label });
-    } else if (ast.type === 'image-gallery') {
-      const images = (ast.content.images || []);
-      const imgSrcs = images.map(img => img.src || '');
-      const labels = images.map(img => img.label || '');
-      all.push({ ...base, imgSrcs, labels });
-    } else if (ast.type === 'image-grid') {
-      const images = (ast.content.images || []);
-      const imgSrcs = images.map(img => img.src || '');
-      const labels = images.map(img => img.label || '');
-      all.push({ ...base, imgSrcs, labels });
-    } else if (ast.type === 'timeline') {
-      const blocks = ast.content.blocks || [];
-      const nodes = [];
-      let cur = null;
-      for (const b of blocks) {
-        if (b.type === 'heading' && b.data.level >= 3) {
-          if (cur) nodes.push(cur);
-          cur = { date: cleanMD(b.data.text), items: [] };
-        } else if (b.type === 'list' && cur) {
-          for (const item of b.data.items) cur.items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
-        } else if (b.type === 'paragraph' && cur) {
-          cur.items.push({ text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) });
-        } else if ((b.type === 'image' || b.type === 'image-tag') && cur) {
-          cur.imageSrc = b.data.src || '';
-        }
-      }
-      if (cur) nodes.push(cur);
-      all.push({ ...base, nodes });
+    // 标签语法：tag project 内部处理
+    const key = ast.parser === 'tag' ? 'tag' : ast.type;
+    const project = PROJECTION[key];
+    if (project) {
+      all.push({ ...base, ...project(ast) });
     } else {
       all.push(base);
     }
@@ -456,6 +324,7 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
   );
 
   const { generate: generatePptScript } = require('../ppt-engine/script');
+  const { DARK_SLIDE_TYPES } = require('../../types/projection');
   const pptScript = generatePptScript({
     slideDataJSON, chartDataJSON, colorsJSON,
     backgroundJSON: config.background ? JSON.stringify(config.background) : 'null',
@@ -463,6 +332,7 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
     svgAsVector: config.export.svgAsVector,
     autoEmbedFonts: config.export.autoEmbedFonts,
     chartSlidesLen: chartSlides ? chartSlides.length : 0,
+    darkTypesJSON: JSON.stringify(DARK_SLIDE_TYPES),
   });
 
 
