@@ -9,10 +9,14 @@
 const { esc } = require('../shared/escape');
 const { styleToHtml } = require('../../../utils/coordinates');
 
-function render(rows, title, chartId, style) {
+function render(rows, title, chartId, style, opts) {
   if (!rows || rows.length < 3) {
-    return `<div style="padding:40px;color:#999;text-align:center;">瀑布图数据不足（至少需要起始+1个变化+结束）</div>`;
+    return `<div style="padding:40px;color:#999;text-align:center;">瀑布图数据不足</div>`;
   }
+  const o = opts || {};
+  const showTitle = o.showTitle === true || (title && title !== '金额' && title !== '数值');
+  const showSummary = o.showSummary === true;
+  const showBadge = o.showBadge === true;
 
   const rawData = rows.map(r => ({ name: r.name, value: Number(r.value) || 0 }));
   const cats = [];
@@ -59,9 +63,12 @@ function render(rows, title, chartId, style) {
   if (endVal > cumMax) cumMax = endVal;
   const yMax = Math.ceil(cumMax * 1.08);
 
-  const titleText = title || '瀑布图';
-  const option = {
-    title: { text: titleText, left: 'center', top: 8, textStyle: { fontSize: 16, color: '#333' } },
+  const titleText = showTitle ? (title || '瀑布图') : '';
+  const option = {};
+  if (showTitle) {
+    option.title = { text: titleText, left: 'center', top: 8, textStyle: { fontSize: 16, color: '#333' } };
+  }
+  Object.assign(option, {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
       // formatter 在 script 中重新绑定
       formatter: function(p) { return ''; }
@@ -77,7 +84,7 @@ function render(rows, title, chartId, style) {
       { name: '减少', type: 'bar', stack: 'waterfall', data: decreaseSeries,
         label: { show: true, position: 'bottom', fontSize: 9, color: '#ef4444', formatter: function(p) { return ''; } } },
     ],
-  };
+  });
 
   const hLines = { categories: cats, linePoints: linePoints };
   const hLinesJSON = JSON.stringify(hLines);
@@ -93,11 +100,9 @@ function render(rows, title, chartId, style) {
   const pos = styleToHtml(s);
 
   return `<div style="${pos};">
-    <div style="position:absolute;top:6px;right:12px;background:#2ecc71;color:#fff;font-size:10px;padding:2px 8px;z-index:5;font-weight:600;">SVG矢量</div>
+    ${showBadge ? '<div style="position:absolute;top:6px;right:12px;background:#2ecc71;color:#fff;font-size:10px;padding:2px 8px;z-index:5;font-weight:600;">SVG矢量</div>' : ''}
     <div id="${esc(id)}" style="width:100%;height:100%;"></div>
-    <div style="position:absolute;bottom:8px;left:30px;font-size:10px;color:${summaryColor};background:rgba(255,255,255,0.92);padding:3px 8px;font-weight:600;">
-      ${startVal} → ${endVal}，净变化 ${changeSign}${Math.abs(totalChange)}
-    </div>
+    ${showSummary ? `<div style="position:absolute;bottom:8px;left:30px;font-size:10px;color:${summaryColor};background:rgba(255,255,255,0.92);padding:3px 8px;font-weight:600;">${startVal} → ${endVal}，净变化 ${changeSign}${Math.abs(totalChange)}</div>` : ''}
   </div>
 <script>
 (function(){
