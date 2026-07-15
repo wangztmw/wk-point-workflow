@@ -32,23 +32,23 @@ function render(rows, title, chartId, style, opts) {
       const v = Math.abs(d.value);
       baseSeries.push(0);
       increaseSeries.push({ value: v, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
-      decreaseSeries.push(0);
+      decreaseSeries.push('-');
       runningTotal = d.value;
       linePoints.push(runningTotal);
     } else if (i === rawData.length - 1) {
       baseSeries.push(0);
       increaseSeries.push({ value: d.value, itemStyle: { color: '#2563EB', borderRadius: [4, 4, 0, 0] } });
-      decreaseSeries.push(0);
+      decreaseSeries.push('-');
       linePoints.push(d.value);
     } else {
       const delta = d.value;
       if (delta >= 0) {
         baseSeries.push(runningTotal);
         increaseSeries.push({ value: delta, itemStyle: { color: '#16A34A', borderRadius: [4, 4, 0, 0] } });
-        decreaseSeries.push(0);
+        decreaseSeries.push('-');
       } else {
         baseSeries.push(runningTotal + delta);
-        increaseSeries.push(0);
+        increaseSeries.push('-');
         decreaseSeries.push({ value: Math.abs(delta), itemStyle: { color: '#DC2626', borderRadius: [4, 4, 0, 0] } });
       }
       runningTotal += delta;
