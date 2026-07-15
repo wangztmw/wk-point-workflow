@@ -178,15 +178,15 @@
 ---
 
 <slide: content; title: BOM成本演进趋势>
-<chart: waterfall; x: 30; y: 60; w: 900; h: 430; chartType: waterfall>
-| 阶段 | 金额 |
-|------|------|
-| Google Glass | 1080 |
-| HoloLens | 3600 |
-| Magic Leap One | 4608 |
-| XREAL Air | 1656 |
-| Meta Ray-Ban | 1152 |
-| 理想Livis | 1152 |
+<chart: bar; x: 30; y: 60; w: 900; h: 430; chartType: bar>
+| 阶段 | BOM成本（¥） |
+|------|-------------|
+| Google Glass 2013 | 1080 |
+| HoloLens 2016 | 3600 |
+| Magic Leap 2018 | 4608 |
+| XREAL Air 2022 | 1656 |
+| Meta Ray-Ban 2023 | 1152 |
+| 理想Livis 2025 | 1152 |
 
 ---
 
@@ -390,10 +390,10 @@
 |----------|------|
 | 当前BOM | 1152 |
 | 芯片国产替代 | -144 |
-| 规模化量产 | -230 |
+| 规模化量产 | -144 |
 | 结构件自研 | -58 |
-| AI服务自研 | -58 |
-| 供应链整合 | -72 |
+| AI服务自研 | -50 |
+| 供应链整合 | -36 |
 | 目标BOM | 720 |
 
 ---
