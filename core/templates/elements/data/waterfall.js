@@ -74,8 +74,8 @@ function render(rows, title, chartId, style, opts) {
     },
     legend: { bottom: 8, textStyle: { fontSize: 10 }, data: ['增长', '减少'], selectedMode: false },
     grid: { left: '8%', right: '4%', top: showTitle ? '18%' : '6%', bottom: '14%' },
-    xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, color: '#666', rotate: cats.length > 6 ? 25 : 0 }, axisTick: { show: false } },
-    yAxis: { type: 'value', max: yMax, axisLabel: { fontSize: 10, color: '#888' }, splitLine: { lineStyle: { color: '#f0f0f0' } } },
+    xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, color: '#666', rotate: cats.length > 6 ? 25 : 0 }, axisLine: { lineStyle: { color: '#ddd' } }, axisTick: { show: false } },
+    yAxis: { type: 'value', max: yMax, axisLabel: { fontSize: 10, color: '#888' }, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#f0f0f0' } } },
     series: [
       { name: '底座', type: 'bar', stack: 'waterfall', data: baseSeries, itemStyle: { color: 'transparent', borderColor: 'transparent' }, label: { show: false }, emphasis: { itemStyle: { color: 'transparent' } } },
       { name: '增长', type: 'bar', stack: 'waterfall', data: increaseSeries,
