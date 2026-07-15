@@ -12,6 +12,47 @@ function fitChars(boxW, boxH, fs, lh) {
   return { cpl: cpl, maxLines: maxLines, total: cpl * maxLines };
 }
 
+// 多元素slide中的瀑布图：简单柱形渲染到已有slide
+function renderWaterfallBars(slide, rect, tbl) {
+  var rows = tbl.rows || [];
+  if (rows.length < 3) return;
+  var rawData = rows.map(function(r){ return {name:r[0], value:parseFloat(r[1])||0}; });
+  var n = rawData.length;
+  var barW = (rect.w - 0.2) / n * 0.55;
+  var stepX = (rect.w - 0.2) / n;
+  var baseY = rect.y + rect.h - 0.3;
+  // 计算Y范围
+  var cumMax = rawData[0].value, cumVal = rawData[0].value;
+  for (var i = 1; i < n - 1; i++) { cumVal += rawData[i].value; if (cumVal > cumMax) cumMax = cumVal; }
+  var endV = rawData[n-1].value; if (endV > cumMax) cumMax = endV;
+  var scale = (rect.h - 0.8) / (cumMax * 1.08 || 1);
+  var cumulative = 0;
+  rawData.forEach(function(d, i){
+    var cx = rect.x + 0.1 + i * stepX + (stepX - barW) / 2;
+    var color, barH, barY;
+    if (i === 0) {
+      barH = Math.abs(d.value) * scale; barY = baseY - barH;
+      color = '2563EB';
+    } else if (i === n - 1) {
+      barH = d.value * scale; barY = baseY - barH;
+      color = '2563EB';
+    } else {
+      if (d.value >= 0) {
+        barH = d.value * scale; barY = baseY - cumulative * scale - barH;
+        color = '16A34A';
+      } else {
+        barH = Math.abs(d.value) * scale; barY = baseY - (cumulative + d.value) * scale;
+        color = 'DC2626';
+      }
+      cumulative += d.value;
+    }
+    if (barH < 0.05) barH = 0.05;
+    slide.addShape('rect', { x: cx, y: barY, w: barW, h: barH, fill: { color: color }, rectRadius: 0.02 });
+    slide.addText(d.name, { x: cx - stepX*0.15, y: baseY + 0.05, w: barW + stepX*0.3, h: 0.2, fontSize: 6, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
+    slide.addText(String(d.value), { x: cx, y: barY - 0.18, w: barW, h: 0.15, fontSize: 7, color: color, align: 'center', fontFace: 'Microsoft YaHei', bold: true });
+  });
+}
+
 function truncText(text, maxChars) {
   if (!text || text.length <= maxChars) return text;
   return text.slice(0, maxChars - 1).replace(/\\s+$/, '') + '\\u2026';
@@ -148,8 +189,11 @@ function addTagSlidePptx(pptx, s) {
       for (var col = 1; col < tbl2.headers.length; col++) {
         series.push({ name: tbl2.headers[col], values: tbl2.rows.map(function(r) { return parseFloat(r[col]) || 0; }) });
       }
-      // 瀑布图已在入口处单独处理，此处跳过
-      if (chartType === 'waterfall' || chartType === 'waterfall2') return;
+      // 瀑布图：多元素slide用简化柱形，单元素slide已在入口处托管
+      if (chartType === 'waterfall' || chartType === 'waterfall2') {
+        renderWaterfallBars(slide, rect, tbl2);
+        return;
+      }
       // 其他图表 → 原生 addChart
       var chartMap = { bar: 'BAR', pie: 'PIE', line: 'LINE', radar: 'RADAR' };
       var pptxType = chartMap[chartType] || 'BAR';
