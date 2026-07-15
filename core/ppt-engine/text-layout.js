@@ -19,19 +19,29 @@ function addContentSlidePptx(pptx, s) {
     slide.addShape('rect', { x: 0.6, y: y, w: 0.9, h: 0.06, fill: { color: '667eea' } });
     y += 0.35;
   }
-  if (s.items) {
-    s.items.forEach(function(item) {
-      if (y > 5.0) return;
-      var runs = [{ text: '▸  ', options: { color: '667eea' } }].concat(item.runs || [{ text: item.text, options: {} }]);
-      slide.addText(runs, { x: 0.8, y: y, w: 8.4, h: 0.32, fontSize: 13, color: '444444', fontFace: 'Microsoft YaHei' });
-      y += 0.3;
-    });
+  // 按 blocks 原始顺序渲染（保留小标题和列表的穿插关系）
+  var ordered = s.ordered;
+  if (!ordered && s.items) {
+    // 向后兼容旧版 SLIDE_DATA
+    ordered = [];
+    if (s.subHeadings) s.subHeadings.forEach(function(h) { ordered.push({ kind: 'heading', level: h.level, text: h.text }); });
+    if (s.items) s.items.forEach(function(item) { ordered.push({ kind: 'item', text: item.text, runs: item.runs }); });
   }
-  if (s.subHeadings) {
-    s.subHeadings.forEach(function(h) {
+  if (ordered) {
+    ordered.forEach(function(el) {
       if (y > 5.0) return;
-      slide.addText(h.text, { x: 0.6, y: y, w: 8.8, h: 0.35, fontSize: h.level === 3 ? 16 : 14, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
-      y += 0.32;
+      if (el.kind === 'heading') {
+        slide.addText(el.text, { x: 0.6, y: y, w: 8.8, h: 0.35, fontSize: el.level === 3 ? 16 : 14, bold: true, color: '333333', fontFace: 'Microsoft YaHei' });
+        y += 0.32;
+      } else if (el.kind === 'item') {
+        var runs = [{ text: '▸  ', options: { color: '667eea' } }].concat(el.runs || [{ text: el.text, options: {} }]);
+        slide.addText(runs, { x: 0.8, y: y, w: 8.4, h: 0.32, fontSize: 13, color: '444444', fontFace: 'Microsoft YaHei' });
+        y += 0.3;
+      } else if (el.kind === 'para') {
+        var pruns = el.runs || [{ text: el.text, options: { fontSize: 12, color: '555555' } }];
+        slide.addText(pruns, { x: 0.8, y: y, w: 8.4, h: 0.28, fontSize: 12, color: '555555', fontFace: 'Microsoft YaHei' });
+        y += 0.28;
+      }
     });
   }
 }

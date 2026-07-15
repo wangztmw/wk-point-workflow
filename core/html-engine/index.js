@@ -365,12 +365,20 @@ function extractAllSlideData(slides, config) {
       const subtitle = cleanMD(ast.content.headings[1]?.text || '');
       all.push({ ...base, subtitle });
     } else if (ast.type === 'content') {
-      const items = [];
-      for (const list of ast.content.lists) {
-        for (const item of list.items) items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
+      // 用 blocks 保留 Markdown 原始顺序（小标题和列表可能穿插）
+      const ordered = [];
+      for (const b of (ast.content.blocks || [])) {
+        if (b.type === 'heading' && b.data.level >= 3) {
+          ordered.push({ kind: 'heading', level: b.data.level, text: cleanMD(b.data.text) });
+        } else if (b.type === 'list') {
+          for (const item of b.data.items) {
+            ordered.push({ kind: 'item', text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
+          }
+        } else if (b.type === 'paragraph') {
+          ordered.push({ kind: 'para', text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) });
+        }
       }
-      const subHeadings = ast.content.headings.filter(h => h.level >= 3).map(h => ({ level: h.level, text: cleanMD(h.text) }));
-      all.push({ ...base, items, subHeadings });
+      all.push({ ...base, ordered });
     } else if (ast.type === 'summary') {
       const cards = [];
       const h3s = ast.content.headings.filter(h => h.level >= 3);
