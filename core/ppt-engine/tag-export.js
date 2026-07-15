@@ -82,6 +82,47 @@ function renderWaterfallBars(slide, rect, tbl) {
   }
 }
 
+// 估算文本需要多少行（用于 CSS flow 布局）
+function estLines(text, boxW, fs) {
+  if (!text || !boxW || !fs) return 1;
+  var cpl = Math.floor(boxW / fs / 0.7);  // 每行字符数
+  if (cpl < 1) cpl = 1;
+  var clean = String(text).replace(/\\*\\*/g,'').replace(/\\*/g,'');
+  return Math.ceil(clean.length / cpl);
+}
+
+// 根据 block 内容和字号估算自然高度（英寸），用于 CSS flow 排布
+function estBlockHeight(block) {
+  var tag = block.tag;
+  var st = block.style || {};
+  var w = 8.5;  // 默认宽度（英寸）
+  if (tag === 'h1')       { var fs = Number(st['font-size'])||32; return fs/96 * 1.4; }
+  if (tag === 'h2')       { var fs = Number(st['font-size'])||24; return fs/96 * 1.4; }
+  if (tag === 'h3' || tag === 'h4') { var fs = Number(st['font-size'])||16; return fs/96 * 1.4; }
+  if (tag === 'p') {
+    var fs = Number(st['font-size'])||13;
+    var text = (block.data && block.data.text) || '';
+    if (!text) return 0.3;
+    return Math.max(0.3, estLines(text, w, fs) * (fs/96) * 1.7 + 0.06);
+  }
+  if (tag === 'list') {
+    var fs = Number(st['font-size'])||12;
+    var items = (block.data && block.data.items) || [];
+    if (items.length === 0) return 0.3;
+    var totalH = 0;
+    items.forEach(function(item){
+      var t = typeof item === 'string' ? item : (item.text||'');
+      totalH += Math.max(0.2, estLines(t, w-0.2, fs) * (fs/96) * 1.7 + 0.02);
+    });
+    return Math.max(0.3, totalH + 0.04);
+  }
+  if (tag === 'img')      return 1.2;
+  if (tag === 'table')    return Math.max(((block.data && block.data.rows) ? block.data.rows.length + 1 : 3) * 0.22, 0.6);
+  if (tag === 'chart')    return 3.5;
+  if (tag === 'box')      return (Number(st.h)||4) / 96;
+  return 0.4;
+}
+
 function truncText(text, maxChars) {
   if (!text || text.length <= maxChars) return text;
   return text.slice(0, maxChars - 1).replace(/\\s+$/, '') + '\\u2026';
@@ -113,22 +154,33 @@ function addTagSlidePptx(pptx, s) {
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
 
-  // 布局类 slide：渲染页面标题（HTML 版由 layout 渲染，PPT 版需补上）
+  // 布局类 slide：CSS flow 式动态排布，不预计算位置
   var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
+  var layoutCursorY = 0.5;  // 当前 Y 光标（英寸）
+  var layoutX = 0.6, layoutW = 8.8, layoutGap = 0.08;
   if (isLayoutSlide && s.title) {
     slide.addText(s.title, { x: 0.6, y: 0.15, w: 8.8, h: 0.4, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+    layoutCursorY = 0.6;
   }
 
   if (!s.blocks) return;
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
-    var rect = {
-      x: pxToIn(st.x),
-      y: pxToIn(st.y),
-      w: pxToIn(st.w || 820),
-      h: pxToIn(st.h || 40)
-    };
+    // 布局 slide：忽略预计算位置，用 CSS flow 方式动态排列
+    var rect;
+    if (isLayoutSlide) {
+      var h = estBlockHeight(block);  // 根据内容动态算高
+      rect = { x: layoutX, y: layoutCursorY, w: layoutW, h: h };
+      layoutCursorY += h + layoutGap;
+    } else {
+      rect = {
+        x: pxToIn(st.x),
+        y: pxToIn(st.y),
+        w: pxToIn(st.w || 820),
+        h: pxToIn(st.h || 40)
+      };
+    }
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
