@@ -34,8 +34,8 @@ const DEFAULT_CONFIG = {
   },
 };
 
-// 模板路由：从 types/registry.js 读取映射，拼接绝对路径
-const { TEMPLATE_MAP } = require('../../types/registry');
+// 模板路由：从 types/html-registry.js 读取映射，拼接绝对路径
+const { TEMPLATE_MAP } = require('../../types/html-registry');
 const TEMPLATE_REGISTRY = {};
 for (const [type, tplPath] of Object.entries(TEMPLATE_MAP)) {
   TEMPLATE_REGISTRY[type] = path.resolve(__dirname, '..', 'templates', tplPath);
@@ -135,7 +135,7 @@ function resolveImageFromFolders(ast, projectDir) {
     resolveTagImages(ast, projectDir);
     return;
   }
-  const { IMAGE_SLIDE_TYPES } = require('../../types/projection');
+  const { IMAGE_SLIDE_TYPES } = require('../../types/ppt-projection');
   const imageTypes = IMAGE_SLIDE_TYPES;
   if (!projectDir || !imageTypes.includes(ast.type)) return;
 
@@ -270,11 +270,11 @@ function generateThemeCSS(config) {
  * 从 SlideAST 数组中提取图表数据
  * 供浏览器端 PptxGenJS 原生图表导出使用
  */
-// 从 types/projection 导入（唯一真相源）
-const { cleanMD, toRuns } = require('../../types/projection');
+// 从 types/ppt-projection 导入（唯一真相源）
+const { cleanMD, toRuns } = require('../../types/ppt-projection');
 
 function extractAllSlideData(slides, config) {
-  const { PROJECTION } = require('../../types/projection');
+  const { PROJECTION } = require('../../types/ppt-projection');
   const all = [];
 
   for (const ast of slides) {
@@ -307,7 +307,7 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
   );
 
   const { generate: generatePptScript } = require('../ppt-engine/script');
-  const { DARK_SLIDE_TYPES } = require('../../types/projection');
+  const { DARK_SLIDE_TYPES } = require('../../types/ppt-projection');
   const pptScript = generatePptScript({
     slideDataJSON, chartDataJSON, colorsJSON,
     backgroundJSON: config.background ? JSON.stringify(config.background) : 'null',
