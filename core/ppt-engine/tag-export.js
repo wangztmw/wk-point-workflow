@@ -42,41 +42,41 @@ function renderWaterfallBars(slide, rect, tbl) {
     // 刻度标签
     slide.addText(String(val), { x: rect.x - 0.05, y: tickY - 0.1, w: 0.4, h: 0.2, fontSize: 6, color: '999999', align: 'right', fontFace: 'Microsoft YaHei' });
   }
-  // 柱子 + 标签
+  // 柱子 + 标签 + 连接线（照旧模板 waterfall.js 的 connectY 逻辑）
   var cumulative = rawData[0].value;
-  var prevTop = 0;  // 上一个柱顶的Y坐标（用于连接线）
+  var prevConnectY = 0;
   rawData.forEach(function(d, i){
+    var isFirst = i === 0;
+    var isLast = i === n - 1;
     var cx = rect.x + 0.1 + i * stepX + (stepX - barW) / 2;
-    var color, barH, barY;
-    if (i === 0) {
+    var color, barH, barY, connectY;
+    if (isFirst) {
       barH = Math.abs(d.value) * scale; barY = baseY - barH;
-      color = '2563EB';
-    } else if (i === n - 1) {
+      color = '2563EB'; connectY = barY + barH;  // 落地柱顶 = 累计值
+    } else if (isLast) {
       barH = d.value * scale; barY = baseY - barH;
-      color = '2563EB';
+      color = '2563EB'; connectY = barY + barH;
     } else {
       if (d.value >= 0) {
         barH = d.value * scale; barY = baseY - cumulative * scale - barH;
-        color = '16A34A';
+        color = '16A34A'; connectY = barY + barH;  // 增量：新累计值在柱顶
       } else {
         barH = Math.abs(d.value) * scale; barY = baseY - (cumulative + d.value) * scale;
-        color = 'DC2626';
+        color = 'DC2626'; connectY = barY;  // 减量：新累计值在柱底
       }
       cumulative += d.value;
     }
     if (barH < 0.05) barH = 0.05;
-    var barTop = i === n-1 ? barY : barY;  // 最后柱顶=barY，中间柱顶=barY
     slide.addShape('rect', { x: cx, y: barY, w: barW, h: barH, fill: { color: color }, rectRadius: 0.02 });
     slide.addText(d.name, { x: cx - stepX*0.15, y: baseY + 0.05, w: barW + stepX*0.3, h: 0.2, fontSize: 6, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
     slide.addText(String(d.value), { x: cx, y: barY - 0.18, w: barW, h: 0.15, fontSize: 7, color: color, align: 'center', fontFace: 'Microsoft YaHei', bold: true });
-    // 虚线连接：从前一个柱顶到当前柱顶
-    var curTop = barY;  // 当前柱顶Y
-    if (i > 0 && prevTop > 0) {
+    // 虚线连接
+    if (i > 0) {
       var prevCX = rect.x + 0.1 + (i-1) * stepX + stepX / 2;
       var curCX = rect.x + 0.1 + i * stepX + stepX / 2;
-      slide.addShape('line', { x: prevCX, y: prevTop, w: curCX - prevCX, h: 0, line: { color: '999999', width: 1, dashType: 'dash' } });
+      slide.addShape('line', { x: prevCX, y: prevConnectY, w: curCX - prevCX, h: 0, line: { color: '999999', width: 1, dashType: 'dash' } });
     }
-    prevTop = curTop;
+    prevConnectY = connectY;
   });
 }
 
