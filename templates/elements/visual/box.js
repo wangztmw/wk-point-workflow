@@ -2,7 +2,7 @@
  * box.js — 装饰矩形元素
  * render(style) → <div>
  */
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(style) {
   const s = style || {};

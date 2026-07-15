@@ -7,7 +7,7 @@
  * 特性：浮动柱 + 虚线连接 + 摘要栏 + formatter 重绑定
  */
 const { esc } = require('../shared/escape');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(rows, title, chartId, style, opts) {
   if (!rows || rows.length < 3) {

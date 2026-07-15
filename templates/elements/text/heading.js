@@ -3,7 +3,7 @@
  * render(level, text, style) → <hN>
  */
 const { esc } = require('../shared/escape');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(level, text, style) {
   const s = style || {};

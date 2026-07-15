@@ -4,7 +4,7 @@
  */
 const { esc } = require('../shared/escape');
 const { renderInline } = require('../shared/inline');
-const { styleToHtml, maxFitLines, lineClampCSS } = require('../../../utils/coordinates');
+const { styleToHtml, maxFitLines, lineClampCSS } = require('../../../core/utils/coordinates');
 
 function render(text, inlineMarkup, style) {
   const s = style || {};

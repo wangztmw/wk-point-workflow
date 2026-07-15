@@ -5,7 +5,7 @@
  * 替代了传统模板的 CSS 流式布局，确保 HTML 像素位置 = PPT 坐标来源。
  */
 
-const { styleToHtml, styleToFontProps, maxFitLines, charsPerLine, truncateText, lineClampCSS } = require('../utils/coordinates');
+const { styleToHtml, styleToFontProps, maxFitLines, charsPerLine, truncateText, lineClampCSS } = require('../core/utils/coordinates');
 const { esc } = require('./elements/shared/escape');
 const { renderInline } = require('./elements/shared/inline');
 const headingEl = require('./elements/text/heading');

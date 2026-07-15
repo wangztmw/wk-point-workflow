@@ -3,7 +3,7 @@
  * render(headers, rows, style) → 三线表或简易表
  */
 const { esc } = require('../shared/escape');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(headers, rows, style) {
   const s = style || {};

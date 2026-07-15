@@ -4,7 +4,7 @@
  */
 const { esc } = require('../shared/escape');
 const { renderInline } = require('../shared/inline');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(items, ordered, style) {
   const s = style || {};

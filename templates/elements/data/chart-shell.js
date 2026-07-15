@@ -5,7 +5,7 @@
  * renderFallback(title) → 无数据时的占位页
  */
 const { esc } = require('../shared/escape');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(chartId, option, style) {
   const s = style || {};

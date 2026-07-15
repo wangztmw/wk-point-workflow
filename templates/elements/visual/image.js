@@ -3,7 +3,7 @@
  * render(src, label, style) → <img> 或虚线占位框
  */
 const { esc } = require('../shared/escape');
-const { styleToHtml } = require('../../../utils/coordinates');
+const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(src, label, style) {
   const s = style || {};

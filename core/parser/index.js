@@ -10,7 +10,7 @@
  * 纯 JavaScript，零依赖，约 250 行。
  */
 
-const AST = require('../../types/ast');
+const AST = require('../types/ast');
 
 // ============================================================
 // 1. 主入口
