@@ -88,6 +88,7 @@ function buildPptxFromSlideData() {
     else if (s.type === 'image-full')   addImageFullSlidePptx(pptx, s);
     else if (s.type === 'image-gallery') addImageGallerySlidePptx(pptx, s);
     else if (s.type === 'image-grid')   addImageGridSlidePptx(pptx, s);
+    else if (s.type === 'timeline')     addTimelineSlidePptx(pptx, s);
     else if (s.type === 'chart') {
       if (isWaterfallType(s.chartType)) addWaterfallShapes(pptx, s);
       else addNativeChartSlide(pptx, s);

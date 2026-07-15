@@ -62,6 +62,7 @@ const TEMPLATE_REGISTRY = {
   'image-grid':    '../templates/contents/images/image-grid.html.js',
   'image-gallery': '../templates/contents/images/image-gallery.js',
   'tag-slide':     '../templates/tag-renderer.js',
+  'timeline':      '../templates/contents/timeline.html.js',
 };
 
 /**
@@ -435,6 +436,24 @@ function extractAllSlideData(slides, config) {
       const imgSrcs = images.map(img => img.src || '');
       const labels = images.map(img => img.label || '');
       all.push({ ...base, imgSrcs, labels });
+    } else if (ast.type === 'timeline') {
+      const blocks = ast.content.blocks || [];
+      const nodes = [];
+      let cur = null;
+      for (const b of blocks) {
+        if (b.type === 'heading' && b.data.level >= 3) {
+          if (cur) nodes.push(cur);
+          cur = { date: cleanMD(b.data.text), items: [] };
+        } else if (b.type === 'list' && cur) {
+          for (const item of b.data.items) cur.items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
+        } else if (b.type === 'paragraph' && cur) {
+          cur.items.push({ text: cleanMD(b.data.text || ''), runs: toRuns(b.data.inlineMarkup) });
+        } else if ((b.type === 'image' || b.type === 'image-tag') && cur) {
+          cur.imageSrc = b.data.src || '';
+        }
+      }
+      if (cur) nodes.push(cur);
+      all.push({ ...base, nodes });
     } else {
       all.push(base);
     }

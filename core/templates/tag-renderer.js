@@ -5,7 +5,7 @@
  * 替代了传统模板的 CSS 流式布局，确保 HTML 像素位置 = PPT 坐标来源。
  */
 
-const { styleToHtml, styleToFontProps } = require('../utils/coordinates');
+const { styleToHtml, styleToFontProps, maxFitLines, charsPerLine, truncateText, lineClampCSS } = require('../utils/coordinates');
 
 function render(ast, config) {
   const { content } = ast;
@@ -31,8 +31,12 @@ function render(ast, config) {
       case 'h1': case 'h2': case 'h3': case 'h4': {
         const level = parseInt(block.tag[1]);
         const fp = styleToFontProps(style, block.tag);
-        return `<div style="${posStyle}">
-          <h${level} style="margin:0;font-size:${fp.fontSize}px;font-weight:${fp.bold?700:400};color:#${fp.color};text-align:${fp.align};">${esc(block.data.text)}</h${level}>
+        const text = esc(block.data.text);
+        // 单行标题：超宽截断
+        const cpl = charsPerLine(style.w || 820, fp.fontSize);
+        const displayText = text.length > cpl ? text.slice(0, cpl - 1) + '…' : text;
+        return `<div style="${posStyle};overflow:hidden;">
+          <h${level} style="margin:0;font-size:${fp.fontSize}px;font-weight:${fp.bold?700:400};color:#${fp.color};text-align:${fp.align};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${displayText}</h${level}>
         </div>`;
       }
 
@@ -40,8 +44,11 @@ function render(ast, config) {
         const fp = styleToFontProps(style, 'p');
         const html = renderInlineToHTML(block.data.inlineMarkup);
         const pad = style.padding || '0';
+        const h = style.h || 60;
+        const maxL = maxFitLines(h - pad * 2, fp.fontSize, 1.6);
+        const clampCSS = lineClampCSS(maxL);
         return `<div style="${posStyle};padding:${pad}px;">
-          <p style="margin:0;font-size:${fp.fontSize}px;color:#${fp.color};text-align:${fp.align};line-height:1.6;">${html}</p>
+          <p style="margin:0;font-size:${fp.fontSize}px;color:#${fp.color};text-align:${fp.align};line-height:1.6;${clampCSS}">${html}</p>
         </div>`;
       }
 

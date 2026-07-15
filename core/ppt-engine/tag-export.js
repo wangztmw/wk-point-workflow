@@ -5,6 +5,18 @@ module.exports = `
 
 function pxToIn(px) { return (Number(px) || 0) / 96; }
 
+// 文字自适应：估算文本框能容纳的最大字符数
+function fitChars(boxW, boxH, fs, lh) {
+  var cpl = Math.floor((boxW||820) / (fs||13) / 0.7);      // 每行字符数
+  var maxLines = Math.max(1, Math.floor((boxH||40) / ((fs||13) * (lh||1.6))));  // 最大行数
+  return { cpl: cpl, maxLines: maxLines, total: cpl * maxLines };
+}
+
+function truncText(text, maxChars) {
+  if (!text || text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1).replace(/\\s+$/, '') + '\\u2026';
+}
+
 function addTagSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
   // 暗色幻灯片：title / section / ending
@@ -25,7 +37,9 @@ function addTagSlidePptx(pptx, s) {
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
-      slide.addText(block.data.text || '', {
+      var fc = fitChars(rect.w * 96, rect.h * 96, fs, 1.3);
+      var txt = truncText(block.data.text || '', fc.total);
+      slide.addText(txt, {
         x: rect.x, y: rect.y, w: rect.w, h: rect.h,
         fontSize: fs, bold: st.bold === 'true' || tag === 'h1' || tag === 'h2',
         color: st.color || '333333', align: st.align || 'left',
@@ -34,7 +48,12 @@ function addTagSlidePptx(pptx, s) {
     }
     else if (tag === 'p') {
       var fs = Number(st['font-size']) || 13;
-      var runs = (block.data.runs && block.data.runs.length > 0) ? block.data.runs : [{ text: block.data.text || '', options: {} }];
+      var fc = fitChars(rect.w * 96, rect.h * 96, fs, 1.6);
+      var rawRuns = (block.data.runs && block.data.runs.length > 0) ? block.data.runs : [{ text: block.data.text || '', options: {} }];
+      // 截断富文本
+      var fullText = rawRuns.map(function(r){return r.text||'';}).join('');
+      var truncated = truncText(fullText, fc.total);
+      var runs = [{ text: truncated, options: { fontSize: fs, color: st.color || '555555' } }];
       slide.addText(runs, {
         x: rect.x, y: rect.y, w: rect.w, h: rect.h,
         fontSize: fs, color: st.color || '555555', align: st.align || 'left',

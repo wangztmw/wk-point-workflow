@@ -65,7 +65,7 @@ projects/<项目名>/
 ---
 ```
 
-### 全部 20 种类型
+### 全部 21 种类型
 
 #### 页面布局（layouts/）
 | 类型 | 用途 | 写法 |
@@ -115,6 +115,7 @@ projects/<项目名>/
 | `image-grid` | 固定 2×2 或 2×3 网格 |
 | `image-text` | 左图右文（图 55% + 文 45%） |
 | `image-full` | 全屏出血图 + 文字叠加蒙版 |
+| `timeline` | 垂直时间线（H3=节点，列表=详情，可选占位图） |
 
 **图片类型的文件夹驱动模式（重点）：**
 
@@ -145,7 +146,7 @@ images/
 - 不用管图片格式、不用转 base64，系统自动处理
 - 这个模式适用于所有 4 种图片类型
 
-## 模板文件（20个）
+## 模板文件（23个）
 
 ```
 core/templates/
@@ -157,8 +158,8 @@ core/templates/
     chart-bar.html.js, chart-pie.html.js, chart-line.html.js,
     chart-radar.html.js, chart-pareto.js, chart-compare.js,
     chart-waterfall.js, chart-waterfall2.js
-  contents/         5 个特殊内容
-    table.html.js, quote.html.js
+  contents/         6 个特殊内容
+    table.html.js, quote.html.js, timeline.html.js
     images/  ← 4 个图片模板（文件夹驱动）
       image-gallery.js, image-grid.html.js,
       image-text.html.js, image-full.html.js

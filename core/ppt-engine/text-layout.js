@@ -210,4 +210,46 @@ function addThreeColSlidePptx(pptx, s) {
   if (!s.cols) return;
   var colors = ['4472C4', 'ED7D31', '70AD47'];
   s.cols.forEach(function(col, i) {
-    var cx = 0.5 + i * 3.1;`;
+    var cx = 0.5 + i * 3.1;
+
+function addTimelineSlidePptx(pptx, s) {
+  var slide = pptx.addSlide();
+  drawBackgroundShapes(slide);
+  if (!s.nodes || s.nodes.length === 0) return;
+  var topY = s.title ? 1.0 : 0.5;
+  if (s.title) {
+    slide.addText(s.title, { x: 0.5, y: 0.3, w: 9, h: 0.45, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+    slide.addShape('rect', { x: 0.5, y: 0.72, w: 0.5, h: 0.03, fill: { color: '1a1a1a' } });
+  }
+  var nodeH = Math.min((5.2 - topY) / s.nodes.length, 1.3);
+  var lineX = 0.85, dotR = 0.06, contentX = 1.15;
+  // vertical line
+  slide.addShape('rect', { x: lineX, y: topY, w: 0.02, h: s.nodes.length * nodeH, fill: { color: 'E0E0E0' } });
+  s.nodes.forEach(function(node, i) {
+    var cy = topY + i * nodeH + nodeH / 2;
+    // dot
+    slide.addShape('oval', { x: lineX + 0.01 - dotR, y: cy - dotR, w: dotR*2, h: dotR*2, fill: { color: '4f5fd9' } });
+    // connector line
+    slide.addShape('rect', { x: lineX + 0.02, y: cy, w: contentX - lineX - 0.02, h: 0.005, fill: { color: 'E0E0E0' } });
+    // date text
+    slide.addText(node.date, { x: contentX, y: cy - nodeH/2 + 0.05, w: 7.0, h: 0.3, fontSize: 13, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+    // items
+    var iy = cy - nodeH/2 + 0.38;
+    (node.items || []).forEach(function(item) {
+      if (iy > cy + nodeH/2 - 0.1) return;
+      var runs = [{ text: '\\u25b8 ', options: { color: '4f5fd9', fontSize: 10 } }];
+      if (item.runs) runs = runs.concat(item.runs);
+      else runs.push({ text: item.text || '', options: { fontSize: 10, color: '666666' } });
+      slide.addText(runs, { x: contentX + 0.05, y: iy, w: 6.5, h: 0.22, fontFace: 'Microsoft YaHei' });
+      iy += 0.22;
+    });
+    // image placeholder
+    if (node.imageSrc && node.imageSrc.length > 100) {
+      try { slide.addImage({ data: node.imageSrc, x: 8.0, y: cy - nodeH/2 + 0.05, w: 1.5, h: nodeH - 0.2, sizing: { type: 'contain', w: 1.5, h: nodeH - 0.2 } }); } catch(e) {}
+    } else {
+      slide.addShape('rect', { x: 8.0, y: cy - nodeH/2 + 0.05, w: 1.5, h: nodeH - 0.2, fill: { color: 'FAFAFA' }, line: { color: 'DDDDDD', width: 0.4, dashType: 'dash' } });
+      slide.addText('[ 占位 ]', { x: 8.0, y: cy - 0.08, w: 1.5, h: 0.2, fontSize: 7, color: 'BBBBBB', align: 'center', fontFace: 'Microsoft YaHei' });
+    }
+  });
+}
+`;

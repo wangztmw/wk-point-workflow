@@ -20,6 +20,7 @@ const SLIDE_TYPES = [
   'toc', 'section', 'ending', 'kpi-grid',
   'chart', 'table', 'quote',
   'image-text', 'image-full', 'image-grid', 'image-gallery',
+  'timeline',
 ];
 
 const CHART_TYPES = [

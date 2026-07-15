@@ -72,6 +72,56 @@ function styleToFontProps(style, tag) {
   };
 }
 
+// ============================================================
+// 文字自适应
+// ============================================================
+
+/**
+ * 计算文本框能容纳的最大行数
+ * @param {number} boxH - 文本框高度(px)
+ * @param {number} fontSize - 字号(px)
+ * @param {number} lineHeight - 行高倍数，默认 1.6
+ */
+function maxFitLines(boxH, fontSize, lineHeight) {
+  const lh = fontSize * (lineHeight || 1.6);
+  return Math.max(1, Math.floor(boxH / lh));
+}
+
+/**
+ * 估算单行最大字符数（中文字符≈字号宽度，英文≈0.5倍）
+ * @param {number} boxW - 文本框宽度(px)
+ * @param {number} fontSize - 字号(px)
+ */
+function charsPerLine(boxW, fontSize) {
+  // 混合文本：取中文和英文宽度的加权平均 ~0.7 个中文字宽
+  return Math.max(1, Math.floor(boxW / (fontSize * 0.7)));
+}
+
+/**
+ * 将文本截断到指定行数，末行加省略号
+ * @param {string} text - 原始文本
+ * @param {number} maxLines - 最大行数
+ * @param {number} charsPerLine - 每行字符数
+ * @returns {string}
+ */
+function truncateText(text, maxLines, cpl) {
+  if (!text) return '';
+  const totalChars = maxLines * cpl;
+  if (text.length <= totalChars) return text;
+  // 截断，末行留 1 个字符位置给 …
+  const cut = maxLines * cpl - 1;
+  return text.slice(0, cut).replace(/\s+$/, '') + '…';
+}
+
+/**
+ * 生成 CSS line-clamp 样式
+ * @param {number} maxLines - 最大行数
+ * @returns {string} 内联 CSS 片段
+ */
+function lineClampCSS(maxLines) {
+  return `display:-webkit-box;-webkit-line-clamp:${maxLines};-webkit-box-orient:vertical;overflow:hidden;`;
+}
+
 module.exports = {
   SCALE,
   pxToInches,
@@ -80,4 +130,8 @@ module.exports = {
   styleToPptxRect,
   defaultFontSize,
   styleToFontProps,
+  maxFitLines,
+  charsPerLine,
+  truncateText,
+  lineClampCSS,
 };
