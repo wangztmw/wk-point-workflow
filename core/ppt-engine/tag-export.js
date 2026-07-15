@@ -154,32 +154,30 @@ function addTagSlidePptx(pptx, s) {
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
 
-  // 布局类 slide：CSS flow 式动态排布，不预计算位置
+  // 布局类 slide：渲染标题 + flow 式动态排布
   var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
-  var layoutCursorY = 0.5;  // 当前 Y 光标（英寸）
-  var layoutX = 0.6, layoutW = 8.8, layoutGap = 0.08;
   if (isLayoutSlide && s.title) {
     slide.addText(s.title, { x: 0.6, y: 0.15, w: 8.8, h: 0.4, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
-    layoutCursorY = 0.6;
   }
 
   if (!s.blocks) return;
+  var layoutY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
+  var layoutX = 0.6, layoutW = 8.8, layoutGap = 0.06;
+  if (s.type === 'split') { layoutX = 0.5; layoutW = 4.2; }
+  if (s.type === 'grid')  { layoutX = 0.5; layoutW = 4.2; }
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
-    // 布局 slide：忽略预计算位置，用 CSS flow 方式动态排列
+    // 布局 slide：动态高度，不预计算 y
     var rect;
     if (isLayoutSlide) {
-      var h = estBlockHeight(block);  // 根据内容动态算高
-      rect = { x: layoutX, y: layoutCursorY, w: layoutW, h: h };
-      layoutCursorY += h + layoutGap;
+      var h = estBlockHeight(block);
+      rect = { x: st._lx !== undefined ? pxToIn(st._lx) : layoutX,
+               y: st._ly !== undefined ? pxToIn(st._ly) : layoutY,
+               w: st._lw !== undefined ? pxToIn(st._lw) : layoutW, h: h };
+      if (st._ly === undefined) layoutY += h + layoutGap;
     } else {
-      rect = {
-        x: pxToIn(st.x),
-        y: pxToIn(st.y),
-        w: pxToIn(st.w || 820),
-        h: pxToIn(st.h || 40)
-      };
+      rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
     }
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {

@@ -77,82 +77,33 @@ function blockHeight(b, boxW) {
   return 50;
 }
 
-/** blockHeight 的默认宽度版本（供 split/grid 使用） */
-function bh(b) { return blockHeight(b, 420); }
-
-/** 为布局类 slide（stack/grid/split）计算默认位置 */
+/** 为布局 slide 标记列位置（_lx/_lw），高度由 tag-export 动态计算 */
 function layoutBlocks(ast) {
   const blocks = ast.content.blocks || [];
   const t = ast.type;
   if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
 
-  const DPI = 96;
-  const titleH = ast.props.title ? 50 : 0;  // 标题栏高度
-  let y = titleH + 10;
-  const gap = 8;
+  if (t === 'stack') return blocks.map(b => ({ ...b, style: { ...(b.style||{}), _lx: 60, _lw: 840 } }));
+
+  if (t === 'split') {
+    const n = blocks.length;
+    let mid = Math.ceil(n / 2);
+    for (let tryMid = mid; tryMid > 0; tryMid--) {
+      const prev = blocks[tryMid - 1], cur = blocks[tryMid];
+      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
+      mid = tryMid; break;
+    }
+    return blocks.map((b, i) => ({ ...b, style: { ...(b.style||{}), _lx: i < mid ? 50 : 500, _lw: 420 } }));
+  }
 
   if (t === 'grid') {
     const n = blocks.length;
     const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
     const cardW = 850 / cols;
-    // 每张卡片高度根据内容估算
-    const cardHeights = blocks.map(b => bh(b));
-    const rows = Math.ceil(n / cols);
-    // 每行取该行最高卡片
-    const rowHeights = [];
-    for (let r = 0; r < rows; r++) {
-      let maxH = 0;
-      for (let c = 0; c < cols && r*cols+c < n; c++) {
-        maxH = Math.max(maxH, cardHeights[r*cols+c] || 100);
-      }
-      rowHeights.push(maxH + 16);
-    }
-    let yPos = titleH + 10;
-    const result = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols && r*cols+c < n; c++) {
-        const i = r*cols + c;
-        result.push({ ...blocks[i], style: { ...(blocks[i].style||{}), x: 50 + c*(cardW+15), y: yPos, w: cardW, h: rowHeights[r] - 16 } });
-      }
-      yPos += rowHeights[r];
-    }
-    return result;
+    return blocks.map((b, i) => ({ ...b, style: { ...(b.style||{}), _lx: 50 + (i%cols)*(cardW+15), _lw: cardW } }));
   }
-  if (t === 'split') {
-    // 找最优分割点：不拆散 H3+list 对（对齐 split-slide.js 逻辑）
-    const nBlocks = blocks.length;
-    let mid = Math.ceil(nBlocks / 2);
-    for (let tryMid = mid; tryMid > 0; tryMid--) {
-      const prev = blocks[tryMid - 1];
-      const cur = blocks[tryMid];
-      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) {
-        continue; // 会拆散 H3+list → 往前找
-      }
-      mid = tryMid; break;
-    }
-    const leftBs = blocks.slice(0, mid);
-    const rightBs = blocks.slice(mid);
-    const result = [];
-    let lY = titleH + 10, rY = titleH + 10;
-    leftBs.forEach((b) => {
-      const h = bh(b);
-      result.push({ ...b, style: { ...(b.style||{}), x: 50, y: lY, w: 420, h: h } });
-      lY += h + 8;
-    });
-    rightBs.forEach((b) => {
-      const h = bh(b);
-      result.push({ ...b, style: { ...(b.style||{}), x: 500, y: rY, w: 420, h: h } });
-      rY += h + 8;
-    });
-    return result;
-  }
-  // stack: 垂直堆叠
-  return blocks.map(b => {
-    const h = blockHeight(b);
-    const pos = { ...(b.style||{}), x: 60, y: y, w: 840, h: h };
-    y += h + gap;
-    return { ...b, style: pos };
-  });
+
+  return blocks;
 }
 
 function projectTag(ast) {
