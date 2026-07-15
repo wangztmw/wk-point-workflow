@@ -42,7 +42,8 @@ function renderWaterfallBars(slide, rect, tbl) {
     // 刻度标签
     slide.addText(String(val), { x: rect.x - 0.05, y: tickY - 0.1, w: 0.4, h: 0.2, fontSize: 6, color: '999999', align: 'right', fontFace: 'Microsoft YaHei' });
   }
-  // 柱子 + 标签 + 连接线（照旧模板 waterfall.js 的 connectY 逻辑）
+  // 柱子 + 标签 + 虚线连接
+  // 连接规则：增量柱底 = 前柱累计值；减量柱底 = 新累计值（连接下一个）
   var cumulative = rawData[0].value;
   var prevConnectY = 0;
   rawData.forEach(function(d, i){
@@ -52,17 +53,25 @@ function renderWaterfallBars(slide, rect, tbl) {
     var color, barH, barY, connectY;
     if (isFirst) {
       barH = Math.abs(d.value) * scale; barY = baseY - barH;
-      color = '2563EB'; connectY = barY + barH;  // 落地柱顶 = 累计值
+      color = '2563EB';
+      connectY = barY;  // 柱顶 = 累计值500
     } else if (isLast) {
       barH = d.value * scale; barY = baseY - barH;
-      color = '2563EB'; connectY = barY + barH;
+      color = '2563EB';
+      connectY = barY;  // 柱顶 = 累计值
     } else {
       if (d.value >= 0) {
-        barH = d.value * scale; barY = baseY - cumulative * scale - barH;
-        color = '16A34A'; connectY = barY + barH;  // 增量：新累计值在柱顶
+        // 增量：柱底 = 旧累计值，柱顶 = 新累计值
+        barH = d.value * scale;
+        barY = baseY - cumulative * scale - barH;  // 柱顶 = 新累计值
+        color = '16A34A';
+        connectY = barY + barH;  // 连接线在柱底（旧累计值）
       } else {
-        barH = Math.abs(d.value) * scale; barY = baseY - (cumulative + d.value) * scale;
-        color = 'DC2626'; connectY = barY;  // 减量：新累计值在柱底
+        // 减量：柱顶 = 旧累计值，柱底 = 新累计值
+        barH = Math.abs(d.value) * scale;
+        barY = baseY - cumulative * scale;  // 柱顶 = 旧累计值（700）
+        color = 'DC2626';
+        connectY = barY + barH;  // 连接线在柱底（新累计值655）
       }
       cumulative += d.value;
     }
@@ -70,7 +79,7 @@ function renderWaterfallBars(slide, rect, tbl) {
     slide.addShape('rect', { x: cx, y: barY, w: barW, h: barH, fill: { color: color }, rectRadius: 0.02 });
     slide.addText(d.name, { x: cx - stepX*0.15, y: baseY + 0.05, w: barW + stepX*0.3, h: 0.2, fontSize: 6, color: '888888', align: 'center', fontFace: 'Microsoft YaHei' });
     slide.addText(String(d.value), { x: cx, y: barY - 0.18, w: barW, h: 0.15, fontSize: 7, color: color, align: 'center', fontFace: 'Microsoft YaHei', bold: true });
-    // 虚线连接
+    // 虚线连接：从前柱connectY到当前柱connectY（水平线）
     if (i > 0) {
       var prevCX = rect.x + 0.1 + (i-1) * stepX + stepX / 2;
       var curCX = rect.x + 0.1 + i * stepX + stepX / 2;
