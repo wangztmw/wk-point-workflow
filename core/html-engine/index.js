@@ -46,8 +46,13 @@ for (const [type, tplPath] of Object.entries(TEMPLATE_MAP)) {
  * chart 类型会根据 props.chartType 进一步细分
  */
 function resolveTemplateName(ast) {
-  // 标签语法 → 通用绝对定位渲染器
-  if (ast.parser === 'tag') return 'tag-slide';
+  // 标签语法：布局类型走自己的模板（CSS流式），其余走通用绝对定位渲染器
+  if (ast.parser === 'tag') {
+    if (ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split') {
+      return ast.type;
+    }
+    return 'tag-slide';
+  }
 
   if (ast.type === 'chart') {
     const ct = (ast.props.chartType || ast.props.type || 'bar').toLowerCase();
