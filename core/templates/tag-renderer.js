@@ -6,6 +6,11 @@
  */
 
 const { styleToHtml, styleToFontProps, maxFitLines, charsPerLine, truncateText, lineClampCSS } = require('../utils/coordinates');
+const { esc } = require('./elements/shared/escape');
+const { renderInline } = require('./elements/shared/inline');
+const headingEl = require('./elements/text/heading');
+const paragraphEl = require('./elements/text/paragraph');
+const listEl = require('./elements/text/list');
 
 function render(ast, config) {
   const { content } = ast;
@@ -28,43 +33,14 @@ function render(ast, config) {
     const posStyle = styleToHtml(style);
 
     switch (block.tag) {
-      case 'h1': case 'h2': case 'h3': case 'h4': {
-        const level = parseInt(block.tag[1]);
-        const fp = styleToFontProps(style, block.tag);
-        const text = esc(block.data.text);
-        // 单行标题：超宽截断
-        const cpl = charsPerLine(style.w || 820, fp.fontSize);
-        const displayText = text.length > cpl ? text.slice(0, cpl - 1) + '…' : text;
-        return `<div style="${posStyle};overflow:hidden;">
-          <h${level} style="margin:0;font-size:${fp.fontSize}px;font-weight:${fp.bold?700:400};color:#${fp.color};text-align:${fp.align};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${displayText}</h${level}>
-        </div>`;
-      }
+      case 'h1': case 'h2': case 'h3': case 'h4':
+        return headingEl.render(parseInt(block.tag[1]), block.data.text, style);
 
-      case 'p': {
-        const fp = styleToFontProps(style, 'p');
-        const html = renderInlineToHTML(block.data.inlineMarkup);
-        const pad = style.padding || '0';
-        const h = style.h || 60;
-        const maxL = maxFitLines(h - pad * 2, fp.fontSize, 1.6);
-        const clampCSS = lineClampCSS(maxL);
-        return `<div style="${posStyle};padding:${pad}px;">
-          <p style="margin:0;font-size:${fp.fontSize}px;color:#${fp.color};text-align:${fp.align};line-height:1.6;${clampCSS}">${html}</p>
-        </div>`;
-      }
+      case 'p':
+        return paragraphEl.render(block.data.text, block.data.inlineMarkup, style);
 
-      case 'list': {
-        const items = block.data.items || [];
-        const fp = styleToFontProps(style, 'list');
-        const isOrdered = block.data.ordered;
-        const tag = isOrdered ? 'ol' : 'ul';
-        const pad = style.padding || '0';
-        const itemsHTML = items.map(item =>
-          `<li style="font-size:${fp.fontSize}px;color:#${fp.color};line-height:1.7;">${renderInlineToHTML(item.inlineMarkup)}</li>`
-        ).join('');
-        return `<div style="${posStyle};padding:${pad}px;overflow-y:auto;">
-          <${tag} style="margin:0;padding-left:${isOrdered ? 24 : 18}px;">${itemsHTML}</${tag}>
-        </div>`;
-      }
+      case 'list':
+        return listEl.render(block.data.items, block.data.ordered, style);
 
       case 'table': {
         const table = block.data;
@@ -129,19 +105,6 @@ function render(ast, config) {
   </div>`;
 }
 
-// ---- 行内标记 → HTML ----
-
-function renderInlineToHTML(nodes) {
-  if (!nodes || !Array.isArray(nodes)) return '';
-  return nodes.map(n => {
-    if (n.type === 'text') return esc(n.value);
-    if (n.type === 'bold') return '<strong>' + n.content.map(c => esc(c.value)).join('') + '</strong>';
-    if (n.type === 'italic') return '<em>' + n.content.map(c => esc(c.value)).join('') + '</em>';
-    if (n.type === 'code') return '<code style="background:#f0f0f0;padding:1px 5px;border-radius:0;font-family:monospace;font-size:0.9em;">' + esc(n.value) + '</code>';
-    return '';
-  }).join('');
-}
-
 // ---- ECharts 图表脚本 ----
 
 function buildChartScript(id, chartType, tableData, style) {
@@ -178,7 +141,5 @@ function buildChartScript(id, chartType, tableData, style) {
 })();
 <\/script>`;
 }
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 module.exports = { render };
