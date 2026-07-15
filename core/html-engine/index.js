@@ -34,36 +34,12 @@ const DEFAULT_CONFIG = {
   },
 };
 
-// 模板注册表：类型 → 模板文件
-// layouts/ = 页面布局  charts/ = 图表  contents/ = 特殊内容
-const TEMPLATE_REGISTRY = {
-  'title':         '../templates/pages/slides/title.html.js',
-  'content':       '../templates/pages/slides/content.html.js',
-  'summary':       '../templates/pages/slides/summary.html.js',
-  'two-column':    '../templates/pages/slides/two-column.html.js',
-  'toc':           '../templates/pages/slides/toc.html.js',
-  'section':       '../templates/pages/slides/section.html.js',
-  'ending':        '../templates/pages/slides/ending.html.js',
-  'chart':         '../templates/pages/charts/chart-bar.html.js',
-  'chart-bar':     '../templates/pages/charts/chart-bar.html.js',
-  'chart-pie':     '../templates/pages/charts/chart-pie.html.js',
-  'chart-line':    '../templates/pages/charts/chart-line.html.js',
-  'chart-radar':   '../templates/pages/charts/chart-radar.html.js',
-  'chart-pareto':  '../templates/pages/charts/chart-pareto.js',
-  'chart-compare': '../templates/pages/charts/chart-compare.js',
-  'chart-waterfall': '../templates/pages/charts/chart-waterfall.js',
-  'chart-waterfall2':'../templates/pages/charts/chart-waterfall2.js',
-  'three-column':  '../templates/pages/slides/three-column.html.js',
-  'kpi-grid':      '../templates/pages/slides/kpi-grid.html.js',
-  'table':         '../templates/pages/contents/table.html.js',
-  'quote':         '../templates/pages/contents/quote.html.js',
-  'image-text':    '../templates/pages/contents/images/image-text.html.js',
-  'image-full':    '../templates/pages/contents/images/image-full.html.js',
-  'image-grid':    '../templates/pages/contents/images/image-grid.html.js',
-  'image-gallery': '../templates/pages/contents/images/image-gallery.js',
-  'tag-slide':     '../templates/tag-renderer.js',
-  'timeline':      '../templates/pages/contents/timeline.html.js',
-};
+// 模板路由：从 types/registry.js 读取映射，拼接绝对路径
+const { TEMPLATE_MAP } = require('../../types/registry');
+const TEMPLATE_REGISTRY = {};
+for (const [type, tplPath] of Object.entries(TEMPLATE_MAP)) {
+  TEMPLATE_REGISTRY[type] = path.resolve(__dirname, '..', 'templates', tplPath);
+}
 
 /**
  * 根据 slide AST 解析实际使用的模板名
