@@ -26,7 +26,7 @@ function renderWaterfallBars(slide, rect, tbl) {
   for (var i = 1; i < n - 1; i++) { cumVal += rawData[i].value; if (cumVal > cumMax) cumMax = cumVal; }
   var endV = rawData[n-1].value; if (endV > cumMax) cumMax = endV;
   var scale = (rect.h - 0.8) / (cumMax * 1.08 || 1);
-  var cumulative = 0;
+  var cumulative = rawData[0].value;  // 起始值，不是 0
   rawData.forEach(function(d, i){
     var cx = rect.x + 0.1 + i * stepX + (stepX - barW) / 2;
     var color, barH, barY;
