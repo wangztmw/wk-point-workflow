@@ -161,21 +161,27 @@ function addTagSlidePptx(pptx, s) {
   }
 
   if (!s.blocks) return;
-  var layoutY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
-  var layoutX = 0.6, layoutW = 8.8, layoutGap = 0.06;
-  if (s.type === 'split') { layoutX = 0.5; layoutW = 4.2; }
-  if (s.type === 'grid')  { layoutX = 0.5; layoutW = 4.2; }
+  var startY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
+  var layoutGap = 0.06;
+  // 左右栏独立光标（split 专用，stack/grid 只用 L）
+  var layoutLY = startY, layoutRY = startY;
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
-    // 布局 slide：动态高度，不预计算 y
     var rect;
     if (isLayoutSlide) {
+      var isRight = st._lx !== undefined && Number(st._lx) > 200;  // _lx > 200px 视为右栏
+      var curY = isRight ? layoutRY : layoutLY;
       var h = estBlockHeight(block);
-      rect = { x: st._lx !== undefined ? pxToIn(st._lx) : layoutX,
-               y: st._ly !== undefined ? pxToIn(st._ly) : layoutY,
-               w: st._lw !== undefined ? pxToIn(st._lw) : layoutW, h: h };
-      if (st._ly === undefined) layoutY += h + layoutGap;
+      rect = {
+        x: st._lx !== undefined ? pxToIn(st._lx) : 0.6,
+        y: st._ly !== undefined ? pxToIn(st._ly) : curY,
+        w: st._lw !== undefined ? pxToIn(st._lw) : 8.8, h: h
+      };
+      if (st._ly === undefined) {
+        if (isRight) layoutRY += h + layoutGap;
+        else layoutLY += h + layoutGap;
+      }
     } else {
       rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
     }
