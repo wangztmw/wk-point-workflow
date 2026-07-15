@@ -14,6 +14,8 @@ const listEl = require('./elements/text/list');
 const boxEl = require('./elements/visual/box');
 const imageEl = require('./elements/visual/image');
 const tableEl = require('./elements/data/table');
+const waterfallEl = require('./elements/data/waterfall');
+const chartShell = require('./elements/data/chart-shell');
 
 function render(ast, config) {
   const { content } = ast;
@@ -57,10 +59,18 @@ function render(ast, config) {
       case 'chart': {
         const chartType = style.chartType || style.type || 'bar';
         const id = 'chart-' + ast.index + '-' + i;
-        return `<div style="${posStyle};">
-          <div id="${esc(id)}" style="width:100%;height:100%;"></div>
-          ${buildChartScript(id, chartType, block.data, style)}
-        </div>`;
+        // 瀑布图 → 委托 waterfall 元素
+        if (chartType === 'waterfall' || chartType === 'waterfall2') {
+          const rows = (block.data.rows || []).map(r => ({ name: r[0], value: parseFloat(r[1]) || 0 }));
+          const title = block.data.headers ? block.data.headers.slice(1).join('/') : '';
+          return waterfallEl.render(rows, title, id, style);
+        }
+        // 其他图表 → 通用 ECharts
+        if (block.data && block.data.headers && block.data.headers.length >= 2) {
+          const opt = buildEChartOption(chartType, block.data, style);
+          if (opt) return chartShell.render(id, opt, style);
+        }
+        return chartShell.renderFallback('图表数据不足');
       }
 
       default:
@@ -73,13 +83,11 @@ function render(ast, config) {
   </div>`;
 }
 
-// ---- ECharts 图表脚本 ----
+// ---- 通用 ECharts option 构建 ----
 
-function buildChartScript(id, chartType, tableData, style) {
-  if (!tableData || !tableData.headers || tableData.headers.length < 2) {
-    return `<div style="color:#999;text-align:center;padding-top:40px;">（缺少图表数据）</div>`;
-  }
-  const categories = JSON.stringify(tableData.rows.map(r => r[0]));
+function buildEChartOption(chartType, tableData, style) {
+  if (!tableData || !tableData.headers || tableData.headers.length < 2) return null;
+  const cats = tableData.rows.map(r => r[0]);
   const seriesArr = [];
   for (let col = 1; col < tableData.headers.length; col++) {
     seriesArr.push({
@@ -89,25 +97,15 @@ function buildChartScript(id, chartType, tableData, style) {
     });
   }
   const colors = ['#667eea', '#e94560', '#2ecc71', '#f39c12', '#95a5a6'];
-  const seriesColors = seriesArr.map((s, i) => colors[i % colors.length]);
-
-  return `<script>
-(function(){
-  var dom=document.getElementById('${id}');
-  if(!dom)return;
-  var chart=echarts.init(dom,null,{renderer:'svg'});
-  chart.setOption({
-    tooltip:{trigger:'axis'},
-    legend:{data:${JSON.stringify(seriesArr.map(s=>s.name))},bottom:0,textStyle:{fontSize:10}},
-    grid:{left:50,right:20,top:20,bottom:40},
-    xAxis:{type:'category',data:${categories},axisLabel:{fontSize:9}},
-    yAxis:{type:'value',axisLabel:{fontSize:9}},
-    color:${JSON.stringify(colors)},
-    series:${JSON.stringify(seriesArr)}
-  });
-  new ResizeObserver(function(){chart.resize();}).observe(dom);
-})();
-<\/script>`;
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: { data: seriesArr.map(s => s.name), bottom: 0, textStyle: { fontSize: 10 } },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 9 } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 9 } },
+    color: colors,
+    series: seriesArr,
+  };
 }
 
 module.exports = { render };

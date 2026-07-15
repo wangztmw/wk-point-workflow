@@ -18,8 +18,25 @@ function truncText(text, maxChars) {
 }
 
 function addTagSlidePptx(pptx, s) {
+  // 瀑布图：委托专门的形状拼凑函数（它自己创建 slide）
+  if (s.blocks && s.blocks.length === 1 && s.blocks[0].tag === 'chart') {
+    var st = s.blocks[0].style || {};
+    var ct = (st.chartType || st.type || 'bar').toLowerCase();
+    if (ct === 'waterfall' || ct === 'waterfall2') {
+      var tbl = s.blocks[0].data;
+      if (tbl && tbl.headers && tbl.headers.length >= 2) {
+        var cats = tbl.rows.map(function(r){return r[0];});
+        var ser = [];
+        for (var c = 1; c < tbl.headers.length; c++) {
+          ser.push({name:tbl.headers[c], values:tbl.rows.map(function(r){return parseFloat(r[c])||0;})});
+        }
+        addWaterfallShapes(pptx, {chartType:ct, categories:cats, series:ser, title:st.title||s.title||''});
+        return;
+      }
+    }
+  }
+
   var slide = pptx.addSlide();
-  // 暗色幻灯片：title / section / ending
   var isDark = s.type === 'title' || s.type === 'section' || s.type === 'ending';
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
@@ -123,7 +140,6 @@ function addTagSlidePptx(pptx, s) {
       slide.addShape('rect', opts);
     }
     else if (tag === 'chart') {
-      // 委托原生图表渲染
       var tbl2 = block.data;
       if (!tbl2 || !tbl2.headers || tbl2.headers.length < 2) return;
       var chartType = (st.chartType || st.type || 'bar').toLowerCase();
@@ -132,6 +148,9 @@ function addTagSlidePptx(pptx, s) {
       for (var col = 1; col < tbl2.headers.length; col++) {
         series.push({ name: tbl2.headers[col], values: tbl2.rows.map(function(r) { return parseFloat(r[col]) || 0; }) });
       }
+      // 瀑布图已在入口处单独处理，此处跳过
+      if (chartType === 'waterfall' || chartType === 'waterfall2') return;
+      // 其他图表 → 原生 addChart
       var chartMap = { bar: 'BAR', pie: 'PIE', line: 'LINE', radar: 'RADAR' };
       var pptxType = chartMap[chartType] || 'BAR';
       try {
