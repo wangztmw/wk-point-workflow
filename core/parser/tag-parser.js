@@ -185,11 +185,11 @@ function buildContent(lines, startIdx) {
           break;
         }
         case 'table': {
-          const { table, consumed } = parseTableBlock(lines, i - 1);
+          const { table, consumed } = parseTableBlock(lines, i);
           if (table) {
             content.table = table;
             content.blocks.push(AST.createBlock('table', tag.tag, table, tag.style));
-            i = (i - 1) + consumed;
+            i += consumed;
           }
           break;
         }
