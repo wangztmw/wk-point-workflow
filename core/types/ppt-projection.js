@@ -70,13 +70,32 @@ function layoutBlocks(ast) {
     });
   }
   if (t === 'split') {
-    const mid = Math.ceil(blocks.length / 2);
-    const itemH = Math.min((540 - titleH - 30) / Math.max(mid, blocks.length - mid), 60);
-    return blocks.map((b, i) => {
-      const isLeft = i < mid;
-      const idx = isLeft ? i : i - mid;
-      return { ...b, style: { ...(b.style||{}), x: isLeft ? 50 : 500, y: titleH + 10 + idx*(itemH+8), w: 420, h: itemH } };
+    // 合并 H3+list 对后再分割（对齐 split-slide.js 逻辑）
+    const groups = [];
+    let i = 0;
+    while (i < blocks.length) {
+      const b = blocks[i];
+      if ((b.tag === 'h3' || b.tag === 'h4') && i+1 < blocks.length && blocks[i+1].tag === 'list') {
+        groups.push([b, blocks[i+1]]); i += 2;
+      } else if ((b.tag === 'h3' || b.tag === 'h4') && i+1 < blocks.length && blocks[i+1].tag === 'p') {
+        groups.push([b, blocks[i+1]]); i += 2;
+      } else {
+        groups.push([b]); i++;
+      }
+    }
+    const mid = Math.ceil(groups.length / 2);
+    const leftBlocks = groups.slice(0, mid).flat();
+    const rightBlocks = groups.slice(mid).flat();
+    const maxSide = Math.max(leftBlocks.length, rightBlocks.length);
+    const itemH = Math.min((540 - titleH - 30) / (maxSide || 1), 80);
+    const result = [];
+    leftBlocks.forEach((b, idx) => {
+      result.push({ ...b, style: { ...(b.style||{}), x: 50, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
     });
+    rightBlocks.forEach((b, idx) => {
+      result.push({ ...b, style: { ...(b.style||{}), x: 500, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
+    });
+    return result;
   }
   // stack: 垂直堆叠
   return blocks.map(b => {
