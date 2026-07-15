@@ -28,9 +28,20 @@ function renderWaterfallBars(slide, rect, tbl) {
   var endV = rawData[n-1].value; if (endV > cumMax) cumMax = endV;
   var scale = (rect.h - 0.8) / (cumMax * 1.08 || 1);
   var chartTop = baseY - cumMax * 1.08 * scale;
-  // 坐标轴线
-  slide.addShape('line', { x: rect.x + 0.1, y: baseY, w: rect.w - 0.2, h: 0, line: { color: 'DDDDDD', width: 0.8 } });  // X轴
-  slide.addShape('line', { x: rect.x + 0.1, y: chartTop, w: 0, h: baseY - chartTop, line: { color: 'DDDDDD', width: 0.8 } });  // Y轴
+  // 坐标轴线（稍粗）
+  slide.addShape('line', { x: rect.x + 0.1, y: baseY, w: rect.w - 0.2, h: 0, line: { color: 'CCCCCC', width: 1.2 } });  // X轴
+  slide.addShape('line', { x: rect.x + 0.1, y: chartTop, w: 0, h: baseY - chartTop, line: { color: 'CCCCCC', width: 1.2 } });  // Y轴
+  // Y轴刻度（4档）
+  var yRange = cumMax * 1.08;
+  var tickCount = 4;
+  for (var t = 0; t <= tickCount; t++) {
+    var val = Math.round(yRange * t / tickCount);
+    var tickY = baseY - val * scale;
+    // 刻度短线
+    slide.addShape('line', { x: rect.x + 0.05, y: tickY, w: 0.08, h: 0, line: { color: 'CCCCCC', width: 0.6 } });
+    // 刻度标签
+    slide.addText(String(val), { x: rect.x - 0.05, y: tickY - 0.1, w: 0.4, h: 0.2, fontSize: 6, color: '999999', align: 'right', fontFace: 'Microsoft YaHei' });
+  }
   // 柱子 + 标签
   var cumulative = rawData[0].value;
   var prevTop = 0;  // 上一个柱顶的Y坐标（用于连接线）
