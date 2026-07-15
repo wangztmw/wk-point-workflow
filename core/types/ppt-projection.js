@@ -33,20 +33,50 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
-/** 估算 block 渲染高度（px），对齐 HTML stack-slide 的逻辑 */
-function blockHeight(b) {
+/** 估算文本行数（考虑字号、容器宽度、文本长度） */
+function estLines(text, boxW, fontSize) {
+  if (!text) return 1;
+  // 中文字符宽度 ≈ fontSize，英文≈0.5*fontSize，加权≈0.7
+  const cpl = Math.max(1, Math.floor((boxW || 840) / (fontSize * 0.7)));
+  // 去掉 inline markup 标记估算纯文本长度
+  const clean = String(text).replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '');
+  return Math.ceil(clean.length / cpl);
+}
+
+/** 估算 block 渲染高度（px），考虑文本实际体积 */
+function blockHeight(b, boxW) {
+  const w = boxW || 840;
   const tag = b.tag;
-  if (tag === 'h1') return 36;
-  if (tag === 'h2') return 30;
-  if (tag === 'h3' || tag === 'h4') return 24;
-  if (tag === 'p') return 28;
-  if (tag === 'list') return (b.data.items || []).length * 22;
-  if (tag === 'img') return 120;
-  if (tag === 'table') return ((b.data.rows || []).length + 1) * 22;
-  if (tag === 'chart') return 320;
-  if (tag === 'box') return Number(b.style?.h) || 4;
+  const s = b.style || {};
+  if (tag === 'h1')       return Math.max(36, (Number(s['font-size'])||32) * 1.3);
+  if (tag === 'h2')       return Math.max(30, (Number(s['font-size'])||24) * 1.3);
+  if (tag === 'h3' || tag === 'h4') {
+    return Math.max(24, (Number(s['font-size'])||16) * 1.3);
+  }
+  if (tag === 'p') {
+    const fs = Number(s['font-size']) || 13;
+    const text = b.data?.text || '';
+    return Math.max(28, estLines(text, w, fs) * fs * 1.6 + 4);
+  }
+  if (tag === 'list') {
+    const fs = Number(s['font-size']) || 12;
+    const items = b.data?.items || [];
+    let totalH = 0;
+    items.forEach(item => {
+      const t = typeof item === 'string' ? item : (item.text || '');
+      totalH += Math.max(18, estLines(t, w - 20, fs) * fs * 1.6);
+    });
+    return Math.max(items.length * 20, totalH + 4);
+  }
+  if (tag === 'img')      return 120;
+  if (tag === 'table')    return Math.max(((b.data?.rows || []).length + 1) * 22, 80);
+  if (tag === 'chart')    return 320;
+  if (tag === 'box')      return Number(s.h) || 4;
   return 40;
 }
+
+/** blockHeight 的默认宽度版本（供 split/grid 使用） */
+function bh(b) { return blockHeight(b, 420); }
 
 /** 为布局类 slide（stack/grid/split）计算默认位置 */
 function layoutBlocks(ast) {
@@ -62,12 +92,29 @@ function layoutBlocks(ast) {
   if (t === 'grid') {
     const n = blocks.length;
     const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
+    const cardW = 850 / cols;
+    // 每张卡片高度根据内容估算
+    const cardHeights = blocks.map(b => bh(b));
     const rows = Math.ceil(n / cols);
-    const cardW = 850 / cols, cardH = Math.min((540 - titleH - 30) / rows, 200);
-    return blocks.map((b, i) => {
-      const col = i % cols, row = Math.floor(i / cols);
-      return { ...b, style: { ...(b.style || {}), x: 50 + col*(cardW+15), y: titleH + 10 + row*(cardH+12), w: cardW, h: cardH } };
-    });
+    // 每行取该行最高卡片
+    const rowHeights = [];
+    for (let r = 0; r < rows; r++) {
+      let maxH = 0;
+      for (let c = 0; c < cols && r*cols+c < n; c++) {
+        maxH = Math.max(maxH, cardHeights[r*cols+c] || 100);
+      }
+      rowHeights.push(maxH + 16);
+    }
+    let yPos = titleH + 10;
+    const result = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols && r*cols+c < n; c++) {
+        const i = r*cols + c;
+        result.push({ ...blocks[i], style: { ...(blocks[i].style||{}), x: 50 + c*(cardW+15), y: yPos, w: cardW, h: rowHeights[r] - 16 } });
+      }
+      yPos += rowHeights[r];
+    }
+    return result;
   }
   if (t === 'split') {
     // 找最优分割点：不拆散 H3+list 对（对齐 split-slide.js 逻辑）
@@ -83,14 +130,17 @@ function layoutBlocks(ast) {
     }
     const leftBs = blocks.slice(0, mid);
     const rightBs = blocks.slice(mid);
-    const maxSide = Math.max(leftBs.length, rightBs.length);
-    const itemH = Math.min((540 - titleH - 30) / (maxSide || 1), 80);
     const result = [];
-    leftBs.forEach((b, idx) => {
-      result.push({ ...b, style: { ...(b.style||{}), x: 50, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
+    let lY = titleH + 10, rY = titleH + 10;
+    leftBs.forEach((b) => {
+      const h = bh(b);
+      result.push({ ...b, style: { ...(b.style||{}), x: 50, y: lY, w: 420, h: h } });
+      lY += h + 8;
     });
-    rightBs.forEach((b, idx) => {
-      result.push({ ...b, style: { ...(b.style||{}), x: 500, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
+    rightBs.forEach((b) => {
+      const h = bh(b);
+      result.push({ ...b, style: { ...(b.style||{}), x: 500, y: rY, w: 420, h: h } });
+      rY += h + 8;
     });
     return result;
   }
