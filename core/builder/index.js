@@ -207,7 +207,10 @@ async function buildProject(name, themePreset) {
     }
   }
 
-  // 3. 应用主题预设
+  // 3. 注入项目目录（供图片文件夹解析用）
+  config.projectDir = projectDir;
+
+  // 4. 应用主题预设
   if (themePreset && THEME_PRESETS[themePreset]) {
     config = deepMerge(config, THEME_PRESETS[themePreset]);
     console.log(`   🎨 应用主题: ${themePreset}`);

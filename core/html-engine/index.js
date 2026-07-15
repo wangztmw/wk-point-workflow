@@ -60,6 +60,7 @@ const TEMPLATE_REGISTRY = {
   'image-text':    '../templates/contents/images/image-text.html.js',
   'image-full':    '../templates/contents/images/image-full.html.js',
   'image-grid':    '../templates/contents/images/image-grid.html.js',
+  'image-gallery': '../templates/contents/images/image-gallery.js',
 };
 
 /**
@@ -93,6 +94,12 @@ function render(slides, userConfig) {
 
   // 生成自定义 CSS 变量
   const customCSS = generateThemeCSS(config);
+
+  // 图片文件夹解析：对 image-* 类型，从 images/<label>/ 子文件夹读取图片
+  const projectDir = config.projectDir || null;
+  for (const ast of slides) {
+    resolveImageFromFolders(ast, projectDir);
+  }
 
   // 渲染每页幻灯片
   const slidesHTML = slides.map((ast) => {
@@ -128,6 +135,75 @@ function mergeConfig(userConfig) {
     export: { ...DEFAULT_CONFIG.export, ...(userConfig.export || {}) },
     chartColors: userConfig.chartColors || DEFAULT_CONFIG.chartColors,
   };
+}
+
+/**
+ * 从 images/<label>/ 子文件夹解析图片
+ *
+ * 图片标签来源（优先级）：
+ *   1. content.md 中的 - 列表项（推荐，语义为"罗列图片"）
+ *   2. H3+ 标题（向后兼容）
+ *
+ * - 如果子文件夹存在且有图片 → 读取为 base64 data URI
+ * - 如果子文件夹为空或不存在 → src 置空（模板渲染占位框）
+ * 仅对 image-* 类型生效；已有有效 src 的图片不做覆盖
+ */
+function resolveImageFromFolders(ast, projectDir) {
+  const imageTypes = ['image-gallery', 'image-grid', 'image-text', 'image-full'];
+  if (!projectDir || !imageTypes.includes(ast.type)) return;
+
+  const imagesDir = path.join(projectDir, 'images');
+  if (!fs.existsSync(imagesDir)) return;
+
+  // 获取图片标签：优先从 <img:标签名>，其次从 - 列表，最后从 H3+ 标题
+  const existingImages = ast.content.images || [];
+  let labels = existingImages.filter(img => img.label).map(img => img.label);
+  if (labels.length === 0) {
+    for (const list of ast.content.lists) {
+      for (const item of list.items) {
+        const text = (item.text || '').trim();
+        if (text) labels.push(text);
+      }
+    }
+  }
+  if (labels.length === 0) {
+    labels = ast.content.headings.filter(h => h.level >= 3).map(h => h.text);
+  }
+  if (labels.length === 0) return;
+
+  // 检查现有图片是否已有有效 src（如果有则不覆盖）
+  const hasExistingSrc = existingImages.length > 0 && existingImages.some(img => img.src && img.src.length > 100);
+
+  const resolvedImages = labels.map((label, i) => {
+    // 保留已有的有效 src
+    if (hasExistingSrc && existingImages[i] && existingImages[i].src && existingImages[i].src.length > 100) {
+      return { src: existingImages[i].src, label };
+    }
+
+    // 扫描 images/<label>/ 子文件夹
+    const folderPath = path.join(imagesDir, label);
+    if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+      const files = fs.readdirSync(folderPath).filter(f =>
+        /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f) && !f.startsWith('.')
+      );
+      if (files.length > 0) {
+        const imgPath = path.join(folderPath, files[0]);
+        try {
+          const data = fs.readFileSync(imgPath);
+          const ext = path.extname(files[0]).toLowerCase();
+          const mimeMap = { '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.gif': 'image/gif' };
+          const mime = mimeMap[ext] || 'image/jpeg';
+          return { src: `data:${mime};base64,${data.toString('base64')}`, label };
+        } catch (e) {
+          console.warn(`   ⚠ 读取图片失败: ${imgPath}`);
+        }
+      }
+    }
+    // 空文件夹 → 占位
+    return { src: '', label };
+  });
+
+  ast.content.images = resolvedImages;
 }
 
 function loadTemplates() {
@@ -277,14 +353,20 @@ function extractAllSlideData(slides, config) {
       all.push({ ...base, kpis });
     } else if (ast.type === 'image-text') {
       const items = []; for (const list of ast.content.lists) for (const item of list.items) items.push(item.text || '');
-      const imgSrc = (ast.content.images && ast.content.images[0]) ? ast.content.images[0].src : '';
-      all.push({ ...base, items, imgSrc });
+      const imgData = (ast.content.images && ast.content.images[0]) ? ast.content.images[0] : { src: '', label: '' };
+      all.push({ ...base, items, imgSrc: imgData.src, imgLabel: imgData.label });
     } else if (ast.type === 'image-full') {
-      const imgSrc = (ast.content.images && ast.content.images[0]) ? ast.content.images[0].src : '';
-      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '', imgSrc });
+      const imgData = (ast.content.images && ast.content.images[0]) ? ast.content.images[0] : { src: '', label: '' };
+      all.push({ ...base, subtitle: ast.content.headings[1]?.text || '', imgSrc: imgData.src, imgLabel: imgData.label });
+    } else if (ast.type === 'image-gallery') {
+      const images = (ast.content.images || []);
+      const imgSrcs = images.map(img => img.src || '');
+      const labels = images.map(img => img.label || '');
+      all.push({ ...base, imgSrcs, labels });
     } else if (ast.type === 'image-grid') {
-      const imgSrcs = (ast.content.images || []).map(img => img.src || '');
-      const labels = ast.content.headings.filter(h => h.level >= 3).map(h => h.text);
+      const images = (ast.content.images || []);
+      const imgSrcs = images.map(img => img.src || '');
+      const labels = images.map(img => img.label || '');
       all.push({ ...base, imgSrcs, labels });
     } else {
       all.push(base);

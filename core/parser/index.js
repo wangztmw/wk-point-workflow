@@ -208,6 +208,17 @@ function parseContent(text) {
       continue;
     }
 
+    // 图片标签 <img:标签名>
+    const imgTagMatch = trimmed.match(/^<img:(.+?)>$/);
+    if (imgTagMatch) {
+      content.images = content.images || [];
+      const img = { label: imgTagMatch[1].trim(), src: '' };
+      content.images.push(img);
+      content.blocks.push({ type: 'image-tag', data: img });
+      i++;
+      continue;
+    }
+
     // 图片 ![alt](url)
     const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imageMatch) {

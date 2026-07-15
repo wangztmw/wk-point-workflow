@@ -76,6 +76,38 @@ Styler 提取阶段：
 
 ## 计划中
 
+### 图片增强：Markdown 内嵌图片 → HTML + PPTX
+
+**目标**：Markdown 里用 `![](path)` 插入图片，自动映射到 HTML 和 PPTX 的对应位置。
+
+**设计**：
+```
+projects/my-slides/
+├── content.md           ← ![](images/chart.png)
+└── images/
+    └── chart.png        ← 图片放同级目录
+```
+
+图片在 Markdown 中的位置（由 `blocks[]` 数组保留）决定了它在 HTML 和 PPTX 中的渲染位置。
+
+**核心改动**：
+
+| 步骤 | 模块 | 做什么 |
+|------|------|--------|
+| 1 | parser | 构建时把本地路径 `images/photo.png` 转 base64，存入 AST |
+| 2 | content 模板 | 图片按 blocks 顺序内联渲染，不是附加在末尾 |
+| 3 | ppt-engine | text-layout.js 加通用图文混排：检测图片 block → `slide.addImage()`，否则 `addText()` |
+| 4 | 其他模板 | summary / two-column 等模板也支持 blocks 中的图片渲染 |
+| 5 | 尺寸控制 | 默认 `max-height:440px`，后续支持 `![](photo.png =400x300)` 手动指定 |
+
+**当前状态**：
+- [x] parser 解析 `![]()` 语法
+- [x] blocks 数组保留图片在文档中的位置
+- [ ] content 模板按 blocks 顺序内联渲染图片
+- [ ] ppt-engine 导出时嵌入图片
+- [ ] 本地路径 → base64 转换
+- [ ] summary / two-column 等模板支持图片
+
 ### 模板系统
 - [ ] 模板市场：用户可自定义模板包，通过 config.json 切换
 - [ ] 布局描述层（spec）：HTML和PPTX共读同一份布局参数，保证预览和导出一致

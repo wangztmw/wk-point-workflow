@@ -165,7 +165,14 @@ function addQuoteSlidePptx(pptx, s) {
 function addImageTextSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
   drawBackgroundShapes(slide);
-  if (s.imgSrc) { try { slide.addImage({ data: s.imgSrc, x: 0.3, y: 0.5, w: 5.0, h: 4.6, sizing: { type: 'contain', w: 5.0, h: 4.6 } }); } catch(e) {} }
+  var label = s.imgLabel || s.title || '';
+  if (s.imgSrc && s.imgSrc.length > 100) {
+    try { slide.addImage({ data: s.imgSrc, x: 0.3, y: 0.5, w: 5.0, h: 4.6, sizing: { type: 'contain', w: 5.0, h: 4.6 } }); } catch(e) {}
+  } else {
+    // 占位框
+    slide.addShape('rect', { x: 0.5, y: 0.7, w: 4.6, h: 4.2, fill: { color: 'F5F5F5' }, line: { color: 'CCCCCC', width: 0.5, dashType: 'dash' }, rectRadius: 0.05 });
+    if (label) slide.addText(label, { x: 0.5, y: 2.2, w: 4.6, h: 0.3, fontSize: 16, bold: true, color: '999999', align: 'center', fontFace: 'Microsoft YaHei' });
+  }
   if (s.title) slide.addText(s.title, { x: 5.6, y: 0.5, w: 4.0, h: 0.5, fontSize: 22, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
   slide.addShape('rect', { x: 5.6, y: 1.05, w: 0.7, h: 0.03, fill: { color: '1a1a1a' } });
   if (s.items) {
@@ -180,9 +187,16 @@ function addImageTextSlidePptx(pptx, s) {
 
 function addImageFullSlidePptx(pptx, s) {
   var slide = pptx.addSlide();
-  if (s.imgSrc) { try { slide.addImage({ data: s.imgSrc, x: 0, y: 0, w: 10, h: 5.625, sizing: { type: 'cover', w: 10, h: 5.625 } }); } catch(e) {} }
-  else { slide.background = { fill: '1a1a2e' }; }
-  slide.addShape('rect', { x: 0, y: 0, w: 10, h: 5.625, fill: { color: '000000', transparency: 45 } });
+  var label = s.imgLabel || s.title || '';
+  if (s.imgSrc && s.imgSrc.length > 100) {
+    try { slide.addImage({ data: s.imgSrc, x: 0, y: 0, w: 10, h: 5.625, sizing: { type: 'cover', w: 10, h: 5.625 } }); } catch(e) {}
+    slide.addShape('rect', { x: 0, y: 0, w: 10, h: 5.625, fill: { color: '000000', transparency: 45 } });
+  } else {
+    // 占位：深色背景 + 标签文本
+    slide.background = { fill: '1a1a2e' };
+    slide.addShape('rect', { x: 3, y: 1.5, w: 4, h: 2.5, fill: { color: '2a2a4e' }, line: { color: '555588', width: 0.5, dashType: 'dash' }, rectRadius: 0.1 });
+    if (label) slide.addText(label, { x: 1, y: 2.2, w: 8, h: 0.4, fontSize: 20, bold: true, color: 'AAAACC', align: 'center', fontFace: 'Microsoft YaHei' });
+  }
   if (s.title) slide.addText(s.title, { x: 0.5, y: 1.6, w: 9, h: 1.0, fontSize: 36, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Microsoft YaHei' });
   if (s.subtitle) slide.addText(s.subtitle, { x: 1, y: 2.6, w: 8, h: 0.5, fontSize: 16, color: 'CCCCDD', align: 'center', fontFace: 'Microsoft YaHei' });
   slide.addShape('rect', { x: 4.3, y: 3.3, w: 1.4, h: 0.03, fill: { color: 'FFFFFF' } });

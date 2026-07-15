@@ -85,6 +85,7 @@ function buildPptxFromSlideData() {
     else if (s.type === 'kpi-grid')     addKpiGridSlidePptx(pptx, s);
     else if (s.type === 'image-text')   addImageTextSlidePptx(pptx, s);
     else if (s.type === 'image-full')   addImageFullSlidePptx(pptx, s);
+    else if (s.type === 'image-gallery') addImageGallerySlidePptx(pptx, s);
     else if (s.type === 'image-grid')   addImageGridSlidePptx(pptx, s);
     else if (s.type === 'chart') {
       if (isWaterfallType(s.chartType)) addWaterfallShapes(pptx, s);
