@@ -70,29 +70,26 @@ function layoutBlocks(ast) {
     });
   }
   if (t === 'split') {
-    // 合并 H3+list 对后再分割（对齐 split-slide.js 逻辑）
-    const groups = [];
-    let i = 0;
-    while (i < blocks.length) {
-      const b = blocks[i];
-      if ((b.tag === 'h3' || b.tag === 'h4') && i+1 < blocks.length && blocks[i+1].tag === 'list') {
-        groups.push([b, blocks[i+1]]); i += 2;
-      } else if ((b.tag === 'h3' || b.tag === 'h4') && i+1 < blocks.length && blocks[i+1].tag === 'p') {
-        groups.push([b, blocks[i+1]]); i += 2;
-      } else {
-        groups.push([b]); i++;
+    // 找最优分割点：不拆散 H3+list 对（对齐 split-slide.js 逻辑）
+    const nBlocks = blocks.length;
+    let mid = Math.ceil(nBlocks / 2);
+    for (let tryMid = mid; tryMid > 0; tryMid--) {
+      const prev = blocks[tryMid - 1];
+      const cur = blocks[tryMid];
+      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) {
+        continue; // 会拆散 H3+list → 往前找
       }
+      mid = tryMid; break;
     }
-    const mid = Math.ceil(groups.length / 2);
-    const leftBlocks = groups.slice(0, mid).flat();
-    const rightBlocks = groups.slice(mid).flat();
-    const maxSide = Math.max(leftBlocks.length, rightBlocks.length);
+    const leftBs = blocks.slice(0, mid);
+    const rightBs = blocks.slice(mid);
+    const maxSide = Math.max(leftBs.length, rightBs.length);
     const itemH = Math.min((540 - titleH - 30) / (maxSide || 1), 80);
     const result = [];
-    leftBlocks.forEach((b, idx) => {
+    leftBs.forEach((b, idx) => {
       result.push({ ...b, style: { ...(b.style||{}), x: 50, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
     });
-    rightBlocks.forEach((b, idx) => {
+    rightBs.forEach((b, idx) => {
       result.push({ ...b, style: { ...(b.style||{}), x: 500, y: titleH + 10 + idx*(itemH+6), w: 420, h: itemH } });
     });
     return result;
