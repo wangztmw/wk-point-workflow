@@ -98,9 +98,11 @@ function render(rows, title, chartId, style, opts) {
   const s = style || {};
   const pos = styleToHtml(s);
 
+  const chartW = s.w || 530;
+  const chartH = s.h || 430;
   return `<div style="${pos};">
     ${showBadge ? '<div style="position:absolute;top:6px;right:12px;background:#2ecc71;color:#fff;font-size:10px;padding:2px 8px;z-index:5;font-weight:600;">SVG矢量</div>' : ''}
-    <div id="${esc(id)}" style="width:100%;height:100%;"></div>
+    <div id="${esc(id)}" style="width:${chartW}px;height:${chartH}px;"></div>
     ${showSummary ? `<div style="position:absolute;bottom:8px;left:30px;font-size:10px;color:${summaryColor};background:rgba(255,255,255,0.92);padding:3px 8px;font-weight:600;">${startVal} → ${endVal}，净变化 ${changeSign}${Math.abs(totalChange)}</div>` : ''}
   </div>
 <script>
@@ -126,8 +128,7 @@ function render(rows, title, chartId, style, opts) {
   opt.series[2].label.formatter=function(p){
     return p.value>0?'-'+p.value:'';
   };
-  // 暂时移除连接线，排查柱子渲染问题
-  /*
+  // 虚线连接线
   opt.series.push({name:'累计线',type:'custom',data:[0],z:2,
     renderItem:function(params,api){
       var children=[];
@@ -139,7 +140,6 @@ function render(rows, title, chartId, style, opts) {
       return {type:'group',children:children};
     }
   });
-  */
   chart.setOption(opt);
   new ResizeObserver(function(){chart.resize();}).observe(dom);
 })();
