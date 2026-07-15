@@ -173,7 +173,7 @@ function addTagSlidePptx(pptx, s) {
       var nCols = tbl.headers.length;
       var TK = { pt: 2, color: '1a1a1a', type: 'solid' };
       var HD = { pt: 1.5, color: '1a1a1a', type: 'solid' };
-      var N = { type: 'none' };
+      var N = null;
       var rows = [tbl.headers.map(function(h) {
         return { text: h, options: { bold: true, fontSize: fs, color: '1a1a1a', align: 'center', fontFace: 'Microsoft YaHei', border: [TK, N, HD, N] }};
       })];
@@ -225,15 +225,18 @@ function addTagSlidePptx(pptx, s) {
         renderWaterfallBars(slide, rect, tbl2);
         return;
       }
-      // 其他图表 → 原生 addChart（PptxGenJS v3 需要 categories）
+      // 其他图表 → 原生 addChart
       var chartMap = { bar: 'BAR', pie: 'PIE', line: 'LINE', radar: 'RADAR' };
       var pptxType = chartMap[chartType] || 'BAR';
+      // PptxGenJS v3 要求 labels 在 series 内部
+      var chartSeries = series.map(function(s) {
+        return { name: s.name, labels: cats, values: s.values };
+      });
       try {
-        slide.addChart(pptx.charts[pptxType], series, {
+        slide.addChart(pptx.charts[pptxType], chartSeries, {
           x: rect.x, y: rect.y, w: rect.w, h: rect.h,
           catAxisLabelFontSize: 8, valAxisLabelFontSize: 8,
-          showValue: chartType === 'bar', chartColors: CHART_COLORS,
-          catAxisLabelData: cats
+          showValue: chartType === 'bar', chartColors: CHART_COLORS
         });
       } catch(e) {}
     }
