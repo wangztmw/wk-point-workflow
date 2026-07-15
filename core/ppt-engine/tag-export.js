@@ -114,15 +114,21 @@ function addTagSlidePptx(pptx, s) {
   drawBackgroundShapes(slide);
 
   if (!s.blocks) return;
+  // 布局类 slide（stack/grid/split）：block 无 x/y，自动计算垂直堆叠位置
+  var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
+  var layoutY = 0.4;
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
     var rect = {
-      x: pxToIn(st.x),
-      y: pxToIn(st.y),
-      w: pxToIn(st.w || 820),
+      x: isLayoutSlide ? 0.6 : pxToIn(st.x),
+      y: isLayoutSlide ? layoutY : pxToIn(st.y),
+      w: isLayoutSlide ? 8.8 : pxToIn(st.w || 820),
       h: pxToIn(st.h || 40)
     };
+    if (isLayoutSlide) {
+      layoutY += rect.h + 0.1;  // 下一个元素往下排
+    }
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
