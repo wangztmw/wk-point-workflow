@@ -33,50 +33,6 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
-/** 估算文本行数（考虑字号、容器宽度、文本长度） */
-function estLines(text, boxW, fontSize) {
-  if (!text) return 1;
-  // 中文字符宽度 ≈ fontSize，英文≈0.5*fontSize，加权≈0.7
-  const cpl = Math.max(1, Math.floor((boxW || 840) / (fontSize * 0.7)));
-  // 去掉 inline markup 标记估算纯文本长度
-  const clean = String(text).replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '');
-  return Math.ceil(clean.length / cpl);
-}
-
-/** 估算 block 渲染高度（px），考虑文本实际体积 + 安全边距 */
-function blockHeight(b, boxW) {
-  const w = boxW || 840;
-  const tag = b.tag;
-  const s = b.style || {};
-  // 安全系数：PPT 渲染比 HTML 略占空间
-  const safety = 1.25;
-  if (tag === 'h1')       return Math.max(48, (Number(s['font-size'])||32) * 1.5 * safety);
-  if (tag === 'h2')       return Math.max(40, (Number(s['font-size'])||24) * 1.5 * safety);
-  if (tag === 'h3' || tag === 'h4') {
-    return Math.max(32, (Number(s['font-size'])||16) * 1.5 * safety);
-  }
-  if (tag === 'p') {
-    const fs = Number(s['font-size']) || 13;
-    const text = b.data?.text || '';
-    return Math.max(36, estLines(text, w, fs) * fs * 1.7 * safety + 10);
-  }
-  if (tag === 'list') {
-    const fs = Number(s['font-size']) || 12;
-    const items = b.data?.items || [];
-    let totalH = 0;
-    items.forEach(item => {
-      const t = typeof item === 'string' ? item : (item.text || '');
-      totalH += Math.max(24, estLines(t, w - 30, fs) * fs * 1.7 * safety + 4);
-    });
-    return Math.max(items.length * 26, totalH + 10);
-  }
-  if (tag === 'img')      return 140;
-  if (tag === 'table')    return Math.max(((b.data?.rows || []).length + 1) * 26, 100);
-  if (tag === 'chart')    return 340;
-  if (tag === 'box')      return (Number(s.h) || 4) * 1.2;
-  return 50;
-}
-
 const { stackPositions, splitPositions, gridPositions } = require('../../templates/layouts/_positions');
 
 /** 为布局 slide 计算精确位置（HTML 和 PPT 共用 _positions.js） */
