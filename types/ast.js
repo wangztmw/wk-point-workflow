@@ -21,6 +21,7 @@ const SLIDE_TYPES = [
   'chart', 'table', 'quote',
   'image-text', 'image-full', 'image-grid', 'image-gallery',
   'timeline',
+  'stack', 'grid', 'split',
 ];
 
 const CHART_TYPES = [

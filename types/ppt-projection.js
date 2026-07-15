@@ -216,6 +216,9 @@ const PROJECTION = {
   'image-gallery':  projectImageGallery,
   'image-grid':     projectImageGrid,
   'timeline':       projectTimeline,
+  'stack':          projectTag,   // 走 blocks 透传
+  'grid':           projectTag,
+  'split':          projectTag,
 };
 
 // ============================================================

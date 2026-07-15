@@ -42,6 +42,11 @@ const TEMPLATE_MAP = {
   'image-grid':    'pages/contents/images/image-grid.html.js',
   'image-gallery': 'pages/contents/images/image-gallery.js',
 
+  // 布局
+  'stack':         'layouts/stack-slide.js',
+  'grid':          'layouts/grid-slide.js',
+  'split':         'layouts/split-slide.js',
+
   // 标签语法
   'tag-slide':     'tag-renderer.js',
 };
