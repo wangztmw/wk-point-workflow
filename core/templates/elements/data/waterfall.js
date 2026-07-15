@@ -126,7 +126,8 @@ function render(rows, title, chartId, style, opts) {
   opt.series[2].label.formatter=function(p){
     return p.value>0?'-'+p.value:'';
   };
-  // 虚线连接线
+  // 暂时移除连接线，排查柱子渲染问题
+  /*
   opt.series.push({name:'累计线',type:'custom',data:[0],z:2,
     renderItem:function(params,api){
       var children=[];
@@ -138,6 +139,7 @@ function render(rows, title, chartId, style, opts) {
       return {type:'group',children:children};
     }
   });
+  */
   chart.setOption(opt);
   new ResizeObserver(function(){chart.resize();}).observe(dom);
 })();
