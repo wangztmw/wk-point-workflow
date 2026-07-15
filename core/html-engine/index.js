@@ -270,25 +270,8 @@ function generateThemeCSS(config) {
  * 从 SlideAST 数组中提取图表数据
  * 供浏览器端 PptxGenJS 原生图表导出使用
  */
-function cleanMD(s) { return (s||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`([^`]+)`/g,'$1'); }
-// Note: cleanMD 和 toRuns 仍保留本地副本用于 base.title 提取；
-// 类型投影逻辑已移至 types/projection.js
-
-/** 将 parser 的 inlineMarkup 节点转为 PptxGenJS 富文本 runs */
-function toRuns(nodes) {
-  if (!nodes || !Array.isArray(nodes)) return [{ text: '', options: {} }];
-  var runs = [];
-  function walk(ns) {
-    ns.forEach(function(n) {
-      if (n.type === 'text') runs.push({ text: n.value, options: {} });
-      else if (n.type === 'bold') { n.content.forEach(function(c) { runs.push({ text: c.value || '', options: { bold: true } }); }); }
-      else if (n.type === 'italic') { n.content.forEach(function(c) { runs.push({ text: c.value || '', options: { italic: true } }); }); }
-      else if (n.type === 'code') runs.push({ text: n.value, options: { fontFace: 'Courier New', color: '666666' } });
-    });
-  }
-  walk(nodes);
-  return runs.length > 0 ? runs : [{ text: '', options: {} }];
-}
+// 从 types/projection 导入（唯一真相源）
+const { cleanMD, toRuns } = require('../../types/projection');
 
 function extractAllSlideData(slides, config) {
   const { PROJECTION } = require('../../types/projection');
