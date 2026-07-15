@@ -380,15 +380,15 @@ function extractAllSlideData(slides, config) {
       }
       all.push({ ...base, ordered });
     } else if (ast.type === 'summary') {
+      // 用 blocks 保留 H3 和列表的配对关系（每遇 H3 开新卡片，后续列表归它）
       const cards = [];
-      const h3s = ast.content.headings.filter(h => h.level >= 3);
-      for (const h of h3s) {
-        cards.push({ title: cleanMD(h.text), items: [] });
-      }
-      // 把列表项分配给最近的 h3 卡片
-      for (const list of ast.content.lists) {
-        for (const item of list.items) {
-          if (cards.length > 0) cards[cards.length - 1].items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
+      for (const b of (ast.content.blocks || [])) {
+        if (b.type === 'heading' && b.data.level >= 3) {
+          cards.push({ title: cleanMD(b.data.text), items: [] });
+        } else if (b.type === 'list' && cards.length > 0) {
+          for (const item of b.data.items) {
+            cards[cards.length - 1].items.push({ text: cleanMD(item.text || ''), runs: toRuns(item.inlineMarkup) });
+          }
         }
       }
       all.push({ ...base, cards });

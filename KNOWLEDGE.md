@@ -1439,3 +1439,151 @@ INLINE_TYPES  // 4 种行内标记（text/bold/italic/code）
 - **可扩展样式**：加新样式参数不需要改解析器，模板和 PPT 引擎按需读取
 
 改动量：新建 6 个文件，小改 7 个文件，删除 1 个文件。老模板和旧项目完全不受影响。
+
+---
+
+## PPT 导出顺序错乱：排查与修复全记录
+
+### 现象
+
+AI 眼镜项目（43 页，旧 Markdown 语法）导出 PPTX 后，小标题跑到了分点下面，顺序与 Markdown 原文和 HTML 预览不一致。用户反馈"之前修正过，不知道为什么又出现了"。
+
+### 第一轮排查：怀疑 content 类型
+
+`content` 类型是使用最频繁的幻灯片类型（AI 眼镜项目有 16 页 content）。Markdown 中常有 H3 小标题和列表项穿插的结构：
+
+```markdown
+## 什么是AI眼镜？
+- 能看：通过摄像头捕捉画面
+- 能听：通过麦克风阵列接收语音
+
+### 与普通眼镜、VR头显的区别
+- AI眼镜 vs 普通眼镜：内置计算机
+- AI眼镜 vs VR头显：透视现实
+```
+
+**第一轮分析**：`extractAllSlideData()` 对 `content` 类型的处理把列表项和子标题分成了两个独立数组：
+
+```js
+// 旧代码
+const items = [];       // 全部列表项
+const subHeadings = []; // 全部 H3+ 标题
+all.push({ ...base, items, subHeadings });
+```
+
+`addContentSlidePptx` 先渲染全部 `items`，再渲染全部 `subHeadings` → 穿插顺序丢失。HTML 模板 `content.html.js` 使用 `blocks[]` 保留了顺序，所以 HTML 预览是对的，但 PPT 导出是错的。
+
+**第一轮修复**：`extractAllSlideData` 改用 `blocks[]` 生成 `ordered` 数组（每条标记 `kind: 'heading'|'item'|'para'`），`addContentSlidePptx` 按 `ordered` 遍历渲染。加向后兼容逻辑。
+
+**第一轮验证**：检查 SLIDE_DATA 中"什么是AI眼镜？"的 ordered 数组，顺序完全正确。浏览器端 JS 也正确更新。但用户反馈 **导出后仍然错乱**。
+
+### 第二轮排查：发现真凶 — summary 类型
+
+content 类型的 SLIDE_DATA 顺序是正确的，说明问题在别处。全面排查所有幻灯片类型的数据：
+
+```bash
+# 检查 summary 类型的卡片数据
+```
+
+**关键发现**：AI 眼镜项目有 4 个 `summary` 类型的幻灯片，全部呈现相同的异常模式：
+
+```
+Slide 2 核心结论（一）
+  card[0]: ✅ AI眼镜是什么 | items: 0  ← 空的！
+  card[1]: 🎯 最优方案      | items: 4  ← 全堆在这儿
+
+Slide 3 核心结论（二）
+  card[0]: 📉 成本优化路径   | items: 0  ← 空的！
+  card[1]: 🚀 行动建议      | items: 5  ← 全堆在这儿
+```
+
+### 根因
+
+`extractAllSlideData()` 对 `summary` 类型的处理有一行致命代码：
+
+```js
+// 旧代码（bug）
+const cards = [];
+const h3s = ast.content.headings.filter(h => h.level >= 3);
+for (const h of h3s) {
+    cards.push({ title: cleanMD(h.text), items: [] });  // 每张卡片初始为空
+}
+for (const list of ast.content.lists) {
+    for (const item of list.items) {
+        if (cards.length > 0) cards[cards.length - 1].items.push(...);
+        //                    ^^^^^^^^^^^^^^^^^^^^^^^^
+        //                    永远塞进最后一张卡片！
+    }
+}
+```
+
+`cards[cards.length - 1]` = 永远是最后一张卡片。不管 Markdown 里列表项属于哪个 H3 标题，全部堆给最后一张卡片。第一张卡片永远为空。
+
+Markdown 结构：
+```markdown
+### ✅ AI眼镜是什么        ← 卡片0，items 应为 [A1, A2]
+- 摄像头+AI芯片集成        ← A1
+- 手机在"第一人称视角"下    ← A2
+
+### 🎯 最优方案            ← 卡片1，items 应为 [B1, B2]
+- 方案A BOM成本约¥1152     ← B1
+- 毛利率接近47%            ← B2
+```
+
+旧代码的结果：卡片0 = 空，卡片1 = [A1, A2, B1, B2]（4条全堆给它）。
+
+### 修复
+
+跟 `content` 类型一样，用 `blocks[]` 保留原始顺序，每遇到 H3 开新卡片，后续列表归当前卡片：
+
+```js
+// 修复后
+const cards = [];
+for (const b of (ast.content.blocks || [])) {
+    if (b.type === 'heading' && b.data.level >= 3) {
+        cards.push({ title: cleanMD(b.data.text), items: [] });  // 新卡片
+    } else if (b.type === 'list' && cards.length > 0) {
+        for (const item of b.data.items) {
+            cards[cards.length - 1].items.push(...);  // 归当前卡片
+        }
+    }
+}
+```
+
+修复后验证：
+```
+Slide 2 核心结论（一）
+  card[0]: ✅ AI眼镜是什么 | items: 2  ← 正确！
+  card[1]: 🎯 最优方案      | items: 2  ← 正确！
+```
+
+### 为什么 blocks 方案能从根本上解决问题
+
+老方案的问题本质是"按类型分桶"——`headings[]`、`lists[]`、`paragraphs[]` 是三个独立的桶，类型之间的穿插关系被丢掉。`blocks[]` 是"按顺序记录"——每个元素依次入列，不管类型。
+
+```
+分桶模式（旧）：                      顺序模式（新）：
+headings: [H3-A, H3-B]              blocks: [H3-A, list(A1,A2), H3-B, list(B1,B2)]
+lists:    [A1, A2, B1, B2]              │
+            ↑                ↑          ├─ H3-A → 开新卡片
+            来自 H3-A        来自 H3-B   ├─ list  → 归当前卡片
+            无法区分！                    ├─ H3-B → 开新卡片
+                                         └─ list  → 归当前卡片
+```
+
+标签语法天然就是"顺序模式"——每个 `<h3:>` `<list:>` 标签按书写顺序出现在 content.md 里，解析后按序存入 `blocks[]`。这次修复让老 Markdown 语法也享用了同样的顺序保证。
+
+### 涉及修改
+
+| 文件 | 改动 |
+|------|------|
+| `core/html-engine/index.js` | `content` 类型：items+subHeadings → ordered 数组 |
+| `core/html-engine/index.js` | `summary` 类型：cards 分配逻辑改用 blocks，修复分配错误 |
+| `core/ppt-engine/text-layout.js` | `addContentSlidePptx`：按 ordered 遍历渲染，含向后兼容 |
+
+### 教训
+
+1. **"分桶"模式是顺序 bug 的温床**。任何把不同类型元素分到独立数组再分别渲染的代码，都会丢失穿插顺序。`blocks[]` 是唯一的顺序真相。
+2. **修 bug 要看全貌**。第一轮只修了 `content` 类型就以为搞定了，实际上相同的 bug 模式在 `summary` 类型里独立存在。排查时要系统扫描所有受影响的类型。
+3. **数据验证比视觉验证可靠**。直接检查 SLIDE_DATA JSON 比打开 PPTX 逐页对比高效得多——空卡片和超载卡片一眼就能看出来。
+4. **标签化重构让这类问题更容易修复**。标签语法本身就是"顺序模式"，`blocks` 是核心数据结构。老语法向标签语法靠拢的过程，就是逐步消除"分桶"模式的过程。
