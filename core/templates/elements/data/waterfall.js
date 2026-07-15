@@ -70,11 +70,10 @@ function render(rows, title, chartId, style, opts) {
   }
   Object.assign(option, {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-      // formatter 在 script 中重新绑定
       formatter: function(p) { return ''; }
     },
     legend: { bottom: 8, textStyle: { fontSize: 10 }, data: ['增长', '减少'], selectedMode: false },
-    grid: { left: '8%', right: '8%', top: '20%', bottom: '18%' },
+    grid: { left: '8%', right: '8%', top: showTitle ? '18%' : '6%', bottom: '18%' },
     xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 10, color: '#666', rotate: cats.length > 6 ? 25 : 0 }, axisTick: { show: false } },
     yAxis: { type: 'value', max: yMax, axisLabel: { fontSize: 10, color: '#888' }, splitLine: { lineStyle: { color: '#f0f0f0' } } },
     series: [
