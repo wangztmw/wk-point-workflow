@@ -33,35 +33,54 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
+/** 估算 block 渲染高度（px），对齐 HTML stack-slide 的逻辑 */
+function blockHeight(b) {
+  const tag = b.tag;
+  if (tag === 'h1') return 36;
+  if (tag === 'h2') return 30;
+  if (tag === 'h3' || tag === 'h4') return 24;
+  if (tag === 'p') return 28;
+  if (tag === 'list') return (b.data.items || []).length * 22;
+  if (tag === 'img') return 120;
+  if (tag === 'table') return ((b.data.rows || []).length + 1) * 22;
+  if (tag === 'chart') return 320;
+  if (tag === 'box') return Number(b.style?.h) || 4;
+  return 40;
+}
+
 /** 为布局类 slide（stack/grid/split）计算默认位置 */
 function layoutBlocks(ast) {
   const blocks = ast.content.blocks || [];
   const t = ast.type;
   if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
 
-  // 所有值用像素（px），tag-export 会 pxToIn(x/96) 转英寸
   const DPI = 96;
-  let y = 40;
-  const gap = 10;
+  const titleH = ast.props.title ? 50 : 0;  // 标题栏高度
+  let y = titleH + 10;
+  const gap = 8;
+
   if (t === 'grid') {
     const n = blocks.length;
     const cols = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
-    const cardW = 850 / cols, cardH = 400 / Math.ceil(n / cols);
+    const rows = Math.ceil(n / cols);
+    const cardW = 850 / cols, cardH = Math.min((540 - titleH - 30) / rows, 200);
     return blocks.map((b, i) => {
       const col = i % cols, row = Math.floor(i / cols);
-      return { ...b, style: { ...(b.style || {}), x: 50 + col*(cardW+15), y: 50 + row*(cardH+10), w: cardW, h: cardH } };
+      return { ...b, style: { ...(b.style || {}), x: 50 + col*(cardW+15), y: titleH + 10 + row*(cardH+12), w: cardW, h: cardH } };
     });
   }
   if (t === 'split') {
     const mid = Math.ceil(blocks.length / 2);
+    const itemH = Math.min((540 - titleH - 30) / Math.max(mid, blocks.length - mid), 60);
     return blocks.map((b, i) => {
       const isLeft = i < mid;
-      return { ...b, style: { ...(b.style||{}), x: isLeft ? 50 : 500, y: 50 + (isLeft?i:(i-mid))*60, w: 420, h: 50 } };
+      const idx = isLeft ? i : i - mid;
+      return { ...b, style: { ...(b.style||{}), x: isLeft ? 50 : 500, y: titleH + 10 + idx*(itemH+8), w: 420, h: itemH } };
     });
   }
   // stack: 垂直堆叠
   return blocks.map(b => {
-    const h = (b.style && b.style.h) ? Number(b.style.h) : 40;
+    const h = blockHeight(b);
     const pos = { ...(b.style||{}), x: 60, y: y, w: 840, h: h };
     y += h + gap;
     return { ...b, style: pos };

@@ -113,6 +113,12 @@ function addTagSlidePptx(pptx, s) {
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
 
+  // 布局类 slide：渲染页面标题（HTML 版由 layout 渲染，PPT 版需补上）
+  var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
+  if (isLayoutSlide && s.title) {
+    slide.addText(s.title, { x: 0.6, y: 0.15, w: 8.8, h: 0.4, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
+  }
+
   if (!s.blocks) return;
   s.blocks.forEach(function(block) {
     var st = block.style || {};
