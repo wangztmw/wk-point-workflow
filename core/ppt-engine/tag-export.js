@@ -109,11 +109,14 @@ function addTagSlidePptx(pptx, s) {
   }
 
   if (!s.blocks) return;
-  // 所有 block 的 x/y/w/h 已由投影层 layout-engine 预计算好
+  // layout slide 的坐标已是英寸（投影层 layout-engine 产出），其余是像素需 pxToIn
+  var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
-    var rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
+    var rect = isLayoutSlide
+      ? { x: Number(st.x) || 0.6, y: Number(st.y) || 0.3, w: Number(st.w) || 8.8, h: Number(st.h) || 0.4 }
+      : { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
