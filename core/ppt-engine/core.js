@@ -67,7 +67,40 @@ function drawBackgroundShapes(slide) {
   }
 }
 
+// DOM 读取：补全布局 slide 的位置
+function enrichFromDOM(slideData) {
+  function rgbToHex(rgb) {
+    if (!rgb || rgb === 'transparent') return '';
+    var m = rgb.match(/[\d.]+/g);
+    if (!m || m.length < 3) return '';
+    return m.slice(0,3).map(function(v){var h=parseInt(v).toString(16);return h.length===1?'0'+h:h;}).join('');
+  }
+  slideData.forEach(function(s){
+    if (s.parser!=='tag') return;
+    if (s.type!=='stack'&&s.type!=='grid'&&s.type!=='split') return;
+    var slideEl = document.querySelector('[data-slide="'+s.index+'"]');
+    if (!slideEl) return;
+    var slideR = slideEl.getBoundingClientRect();
+    if (slideR.width===0) return;
+    var scale = slideR.width / 960;
+    s.blocks.forEach(function(block,i){
+      var el = slideEl.querySelector('[data-block="'+i+'"]');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      var cs = getComputedStyle(el);
+      block.style.x = Math.round((r.left-slideR.left)/scale);
+      block.style.y = Math.round((r.top-slideR.top)/scale);
+      block.style.w = Math.round(r.width/scale);
+      block.style.h = Math.round(r.height/scale);
+      if (!block.style['font-size']) block.style['font-size'] = Math.round(parseFloat(cs.fontSize));
+      if (!block.style.color||block.style.color==='333333'){var hex=rgbToHex(cs.color);if(hex)block.style.color=hex;}
+      if (!block.style.align) block.style.align = cs.textAlign;
+    });
+  });
+}
+
 function buildPptxFromSlideData() {
+  enrichFromDOM(SLIDE_DATA);
   var pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'C16x9', width: 10, height: 5.625 });
   pptx.layout = 'C16x9';

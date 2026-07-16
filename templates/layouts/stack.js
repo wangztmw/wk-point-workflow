@@ -13,15 +13,15 @@ function render(elements, title, config) {
   const startY = title ? 70 : 30;
   let y = startY;
 
-  const parts = elements.map(el => {
+  const parts = elements.map((el, i) => {
     const h = (el.style && el.style.h) || 40;
     const elStyle = { ...(el.style || {}), x: el.style?.x || 40, y, w: el.style?.w || 880, h };
     const html = el.render(elStyle);
     y += h + gap;
-    return html;
+    return `<div data-block="${i}">${html}</div>`;
   }).join('\n');
 
-  return `<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
+  return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
     ${title ? `<div style="position:absolute;left:40px;top:20px;">${pageTitle.render(title)}</div>` : ''}
     ${parts}
   </div>`;

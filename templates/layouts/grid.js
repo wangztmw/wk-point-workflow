@@ -16,12 +16,12 @@ function render(elements, cols, title, config) {
   const cardW = (availW - gap * (c - 1)) / c;
   const cardH = (availH - gap * (Math.ceil(n / c) - 1)) / Math.ceil(n / c);
 
-  const cardsHTML = elements.map(el => {
+  const cardsHTML = elements.map((el, i) => {
     const elStyle = { ...(el.style || {}), w: cardW, h: cardH };
-    return `<div style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
+    return `<div data-block="${i}" style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
   }).join('');
 
-  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
+  return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
     ${title ? pageTitle.render(title) : ''}
     <div style="display:grid;grid-template-columns:repeat(${c},${cardW}px);gap:${gap}px;justify-content:center;${title?'margin-top:12px;':''}">
       ${cardsHTML}

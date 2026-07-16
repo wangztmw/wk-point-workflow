@@ -92,7 +92,7 @@ function render(ast, config) {
     i++;
   }
 
-  return stack.render(elements, title, config);
+  return stack.render(elements, title, { ...config, slideIndex: ast.index });
 }
 
 module.exports = { render };

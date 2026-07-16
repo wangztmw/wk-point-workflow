@@ -33,22 +33,8 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
-const { stackPositions, splitPositions, gridPositions } = require('../../templates/layouts/_positions');
-
-/** 为布局 slide 计算精确位置（HTML 和 PPT 共用 _positions.js） */
-function layoutBlocks(ast) {
-  const blocks = ast.content.blocks || [];
-  const t = ast.type;
-  const startY = ast.props.title ? 70 : 60;
-  if (t === 'stack') return stackPositions(blocks, startY);
-  if (t === 'split') return splitPositions(blocks, startY);
-  if (t === 'grid')  return gridPositions(blocks, startY);
-  return blocks;
-}
-
 function projectTag(ast) {
-  const rawBlocks = layoutBlocks(ast);
-  const blocks = rawBlocks.map(b => {
+  const blocks = ast.content.blocks.map(b => {
     let data;
     if (b.tag === 'img') {
       data = { src: b.data.src || '', label: b.data.label || '' };

@@ -14,22 +14,22 @@ function render(leftEls, rightEls, title, ratio, config) {
   const leftW = Math.floor(availW * r - gap / 2);
   const rightW = availW - leftW - gap;
 
-  function renderCol(els, colW, colH) {
+  function renderCol(els, colW, colH, startIdx) {
     let y = 0;
-    return els.map(el => {
+    return els.map((el, i) => {
       const h = Math.min((el.style && el.style.h) || 40, colH - y);
       const html = el.render({ ...(el.style || {}), x: 0, y, w: colW, h });
       y += h + 8;
-      return html;
+      return `<div data-block="${startIdx + i}">${html}</div>`;
     }).join('');
   }
 
-  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
+  return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
     ${title ? pageTitle.render(title) : ''}
     <div style="display:flex;gap:${gap}px;${title?'margin-top:12px;':''}height:${availH}px;">
-      <div style="width:${leftW}px;position:relative;overflow:hidden;">${renderCol(leftEls||[], leftW, availH)}</div>
+      <div style="width:${leftW}px;position:relative;overflow:hidden;">${renderCol(leftEls||[], leftW, availH, 0)}</div>
       <div style="width:2px;background:var(--color-border);flex-shrink:0;"></div>
-      <div style="width:${rightW}px;position:relative;overflow:hidden;">${renderCol(rightEls||[], rightW, availH)}</div>
+      <div style="width:${rightW}px;position:relative;overflow:hidden;">${renderCol(rightEls||[], rightW, availH, leftEls.length)}</div>
     </div>
   </div>`;
 }

@@ -56,7 +56,7 @@ function render(ast, config) {
   const leftEls = raw.slice(0, mid);
   const rightEls = raw.slice(mid);
 
-  return split.render(leftEls, rightEls, title, 0.5, config);
+  return split.render(leftEls, rightEls, title, 0.5, { ...config, slideIndex: ast.index });
 }
 
 module.exports = { render };
