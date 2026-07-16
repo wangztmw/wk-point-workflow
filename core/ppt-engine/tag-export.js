@@ -102,75 +102,18 @@ function addTagSlidePptx(pptx, s) {
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
 
-  // 布局类 slide：渲染页面标题 + 垂直 flow 堆叠
+  // 布局类 slide：渲染页面标题
   var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
   if (isLayoutSlide && s.title) {
     slide.addText(s.title, { x: 0.6, y: 0.15, w: 8.8, h: 0.4, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
   }
 
   if (!s.blocks) return;
-  var slideH = 5.2;  // PPT 可用高度（英寸）
-  var startY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
-  var gap = 0.06;
-  // split：计算中点（与 HTML 端 split-slide.js 一致）
-  var splitMid = 0;
-  if (s.type === 'split') {
-    var n = s.blocks.length;
-    splitMid = Math.ceil(n / 2);
-    for (var tryMid = splitMid; tryMid > 0; tryMid--) {
-      var prev = s.blocks[tryMid - 1], cur = s.blocks[tryMid];
-      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
-      splitMid = tryMid; break;
-    }
-    // 左右各栏：按文本量加权分配高度
-    function colWeight(blocks) {
-      var w = 0;
-      blocks.forEach(function(b) {
-        if (b.tag === 'h3' || b.tag === 'h4') w += 1;
-        else if (b.tag === 'p') w += 2;
-        else if (b.tag === 'list') w += (b.data && b.data.items ? b.data.items.length : 2);
-        else if (b.tag === 'img') w += 3;
-        else if (b.tag === 'table') w += 4;
-        else if (b.tag === 'chart') w += 5;
-        else w += 1;
-      });
-      return w || 1;
-    }
-    var leftBs = s.blocks.slice(0, splitMid);
-    var rightBs = s.blocks.slice(splitMid);
-    var lW = colWeight(leftBs), rW = colWeight(rightBs);
-    var availH = slideH - startY - gap * (Math.max(leftBs.length, rightBs.length) - 1);
-    var unitH = availH / (lW + rW);
-    var lY = startY, rY = startY;
-    leftBs.forEach(function(block) {
-      var w = (block.tag==='list' ? (block.data&&block.data.items?block.data.items.length:2) : (block.tag==='img'?3:1));
-      var h = Math.max(0.3, w * unitH);
-      renderBlock(slide, block, { x: 0.6, y: lY, w: 4.2, h: h });
-      lY += h + gap;
-    });
-    rightBs.forEach(function(block) {
-      var w = (block.tag==='list' ? (block.data&&block.data.items?block.data.items.length:2) : (block.tag==='img'?3:1));
-      var h = Math.max(0.3, w * unitH);
-      renderBlock(slide, block, { x: 5.1, y: rY, w: 4.2, h: h });
-      rY += h + gap;
-    });
-    return;
-  }
-
-  // stack/grid：全部垂直流
-  var perH = (slideH - startY - gap * (s.blocks.length - 1)) / Math.max(s.blocks.length, 1);
-  var layoutY = startY;
+  // 所有 block 的 x/y/w/h 已由投影层 layout-engine 预计算好
   s.blocks.forEach(function(block) {
-    var h = (block.tag === 'h3' || block.tag === 'h4') ? (Number(block.style['font-size'])||15)/96*1.6+0.06 : perH;
-    renderBlock(slide, block, { x: 0.6, y: layoutY, w: 8.8, h: h });
-    layoutY += h + gap;
-  });
-  return;  // 布局 slide 已处理完毕
-
-  // renderBlock helper（内联）
-  function renderBlock(slide, block, rect) {
     var st = block.style || {};
     var tag = block.tag;
+    var rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
