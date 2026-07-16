@@ -171,21 +171,37 @@ function addTagSlidePptx(pptx, s) {
       if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
       splitMid = tryMid; break;
     }
-    // 左右各栏：可用高度均分给该栏元素
-    var leftCount = splitMid;
-    var rightCount = s.blocks.length - splitMid;
-    var lPerH = (slideH - startY - gap * (leftCount - 1)) / Math.max(leftCount, 1);
-    var rPerH = (slideH - startY - gap * (rightCount - 1)) / Math.max(rightCount, 1);
+    // 左右各栏：按文本量加权分配高度
+    function colWeight(blocks) {
+      var w = 0;
+      blocks.forEach(function(b) {
+        if (b.tag === 'h3' || b.tag === 'h4') w += 1;
+        else if (b.tag === 'p') w += 2;
+        else if (b.tag === 'list') w += (b.data && b.data.items ? b.data.items.length : 2);
+        else if (b.tag === 'img') w += 3;
+        else if (b.tag === 'table') w += 4;
+        else if (b.tag === 'chart') w += 5;
+        else w += 1;
+      });
+      return w || 1;
+    }
+    var leftBs = s.blocks.slice(0, splitMid);
+    var rightBs = s.blocks.slice(splitMid);
+    var lW = colWeight(leftBs), rW = colWeight(rightBs);
+    var availH = slideH - startY - gap * (Math.max(leftBs.length, rightBs.length) - 1);
+    var unitH = availH / (lW + rW);
     var lY = startY, rY = startY;
-    s.blocks.forEach(function(block, i) {
-      var isRight = i >= splitMid;
-      var perH = isRight ? rPerH : lPerH;
-      var colW = 4.2;
-      var curY = isRight ? rY : lY;
-      // 标题用小高度，其他用均分
-      var h = (block.tag === 'h3' || block.tag === 'h4') ? (Number(block.style['font-size'])||15)/96*1.6+0.06 : perH;
-      renderBlock(slide, block, { x: isRight ? 5.1 : 0.6, y: curY, w: colW, h: h });
-      if (isRight) rY += h + gap; else lY += h + gap;
+    leftBs.forEach(function(block) {
+      var w = (block.tag==='list' ? (block.data&&block.data.items?block.data.items.length:2) : (block.tag==='img'?3:1));
+      var h = Math.max(0.3, w * unitH);
+      renderBlock(slide, block, { x: 0.6, y: lY, w: 4.2, h: h });
+      lY += h + gap;
+    });
+    rightBs.forEach(function(block) {
+      var w = (block.tag==='list' ? (block.data&&block.data.items?block.data.items.length:2) : (block.tag==='img'?3:1));
+      var h = Math.max(0.3, w * unitH);
+      renderBlock(slide, block, { x: 5.1, y: rY, w: 4.2, h: h });
+      rY += h + gap;
     });
     return;
   }
