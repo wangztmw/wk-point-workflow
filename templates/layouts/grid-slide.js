@@ -40,7 +40,7 @@ function render(ast, config) {
     }
   }).filter(Boolean);
 
-  return grid.render(elements, 0, title, { ...config, slideIndex: ast.index });
+  return grid.render(elements, 0, title, { ...config });
 }
 
 module.exports = { render };

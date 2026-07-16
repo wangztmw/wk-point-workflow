@@ -82,6 +82,23 @@ function renderWaterfallBars(slide, rect, tbl) {
   }
 }
 
+// 简单慷慨的高度估算（英寸）：宁可留白，不要重叠
+function estBlockH(block) {
+  var tag = block.tag;
+  var st = block.style || {};
+  var fs = Number(st['font-size']);
+  if (tag === 'h1')       return (fs||32) / 96 * 1.6;
+  if (tag === 'h2')       return (fs||24) / 96 * 1.6;
+  if (tag === 'h3' || tag === 'h4') return (fs||16) / 96 * 1.6;
+  if (tag === 'p')        return 0.5;
+  if (tag === 'list')     return ((block.data && block.data.items) ? block.data.items.length : 3) * 0.25;
+  if (tag === 'img')      return 1.4;
+  if (tag === 'table')    return ((block.data && block.data.rows) ? block.data.rows.length + 1 : 3) * 0.26;
+  if (tag === 'chart')    return 3.6;
+  if (tag === 'box')      return (Number(st.h)||4) / 96;
+  return 0.5;
+}
+
 function truncText(text, maxChars) {
   if (!text || text.length <= maxChars) return text;
   return text.slice(0, maxChars - 1).replace(/\\s+$/, '') + '\\u2026';
@@ -113,18 +130,29 @@ function addTagSlidePptx(pptx, s) {
   if (isDark) slide.background = { fill: '1a1a2e' };
   drawBackgroundShapes(slide);
 
-  // 布局类 slide：渲染页面标题
+  // 布局类 slide：渲染页面标题 + 垂直 flow 堆叠
   var isLayoutSlide = s.type === 'stack' || s.type === 'grid' || s.type === 'split';
   if (isLayoutSlide && s.title) {
     slide.addText(s.title, { x: 0.6, y: 0.15, w: 8.8, h: 0.4, fontSize: 20, bold: true, color: '1a1a1a', fontFace: 'Microsoft YaHei' });
   }
 
   if (!s.blocks) return;
-  // 所有 slide 统一：x/y/w/h 已由 _positions.js 预计算好
+  var layoutY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
+  var layoutX = isLayoutSlide ? 0.6 : 0;
+  var layoutW = isLayoutSlide ? 8.8 : 0;
+  var layoutGap = 0.08;
   s.blocks.forEach(function(block) {
     var st = block.style || {};
     var tag = block.tag;
-    var rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
+    var rect;
+    if (isLayoutSlide) {
+      // 高度按内容估算，给足余量
+      var h = estBlockH(block);
+      rect = { x: layoutX, y: layoutY, w: layoutW, h: h };
+      layoutY += h + layoutGap;
+    } else {
+      rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
+    }
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);

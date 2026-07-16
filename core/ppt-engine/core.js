@@ -67,42 +67,7 @@ function drawBackgroundShapes(slide) {
   }
 }
 
-// DOM 读取：为布局 slide 的每个 block 补全实际渲染尺寸
-function enrichFromDOM(slideData) {
-  slideData.forEach(function(s){
-    if (s.parser!=='tag') return;
-    if (s.type!=='stack'&&s.type!=='grid'&&s.type!=='split') return;
-    var slideEl = document.querySelector('[data-slide="'+s.index+'"]');
-    if (!slideEl) return;
-    var slideR = slideEl.getBoundingClientRect();
-    if (slideR.width===0) return;
-    var scale = slideR.width / 960;
-    var blocks = slideEl.querySelectorAll('[data-block]');
-    // 按 data-block 索引排序
-    var sorted = [];
-    blocks.forEach(function(el){
-      var idx = parseInt(el.getAttribute('data-block'));
-      if (!isNaN(idx)) sorted.push({idx:idx, el:el});
-    });
-    sorted.sort(function(a,b){return a.idx-b.idx;});
-    sorted.forEach(function(item){
-      var i = item.idx;
-      if (i >= s.blocks.length) return;
-      var r = item.el.getBoundingClientRect();
-      var cs = getComputedStyle(item.el);
-      var block = s.blocks[i];
-      block.style.x = Math.round((r.left-slideR.left)/scale);
-      block.style.y = Math.round((r.top-slideR.top)/scale);
-      block.style.w = Math.round(r.width/scale);
-      block.style.h = Math.round(r.height/scale);
-      if (!block.style['font-size']) block.style['font-size'] = Math.round(parseFloat(cs.fontSize));
-      if (!block.style.align) block.style.align = cs.textAlign || 'left';
-    });
-  });
-}
-
 function buildPptxFromSlideData() {
-  enrichFromDOM(SLIDE_DATA);
   var pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'C16x9', width: 10, height: 5.625 });
   pptx.layout = 'C16x9';

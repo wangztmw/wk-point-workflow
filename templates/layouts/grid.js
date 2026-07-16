@@ -21,7 +21,7 @@ function render(elements, cols, title, config) {
     return '<div data-block="' + i + '" style="position:relative;width:' + cardW + 'px;height:' + cardH + 'px;overflow:hidden;">' + el.render(elStyle) + '</div>';
   }).join('');
 
-  return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
+  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
     ${title ? pageTitle.render(title) : ''}
     <div style="display:grid;grid-template-columns:repeat(${c},${cardW}px);gap:${gap}px;justify-content:center;${title?'margin-top:12px;':''}">
       ${cardsHTML}

@@ -20,11 +20,11 @@ function render(leftEls, rightEls, title, ratio, config) {
       const h = Math.min((el.style && el.style.h) || 40, colH - y);
       const html = el.render({ ...(el.style || {}), x: 0, y, w: colW, h });
       y += h + 8;
-      return html.replace('style="', 'data-block="' + (startIdx + i) + '" style="');
+      return html;
     }).join('');
   }
 
-  return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
+  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
     ${title ? pageTitle.render(title) : ''}
     <div style="display:flex;gap:${gap}px;${title?'margin-top:12px;':''}height:${availH}px;">
       <div style="width:${leftW}px;position:relative;overflow:hidden;">${renderCol(leftEls||[], leftW, availH, 0)}</div>
