@@ -15,8 +15,14 @@ function generate(params) {
   const table   = require('./table');
   const image   = require('./image');
   const tagexport = require('./tag-export');
+  const { fitChars, truncText, itemHeight } = require('../../templates/layouts/layout-engine');
 
-  let code = [core, waterfall, chart, text, table, image, tagexport].join('\n');
+  // 浏览器端需要的布局工具函数（tag-export 渲染时调用）
+  const engineUtils = 'var fitChars = ' + fitChars.toString() + ';\n'
+    + 'var truncText = ' + truncText.toString() + ';\n'
+    + 'var itemHeight = ' + itemHeight.toString() + ';\n';
+
+  let code = [core, waterfall, chart, text, table, image, engineUtils, tagexport].join('\n');
 
   // 占位符替换（browser-code.txt 中残留的）
   code = code.replace(/__SLIDE_DATA__/g, params.slideDataJSON);
