@@ -311,7 +311,7 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
       .map(c => c.replace('#', ''))
   );
 
-  const { generate: generatePptScript } = require('../ppt-engine/script');
+  const { generate: generatePptScript } = require('../ppt-engine/ppt-engine-assemble');
   const { DARK_SLIDE_TYPES } = require('../types/ppt-projection');
   const pptScript = generatePptScript({
     slideDataJSON, chartDataJSON, colorsJSON,
