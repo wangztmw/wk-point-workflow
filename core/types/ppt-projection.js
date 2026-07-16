@@ -33,7 +33,7 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
-const { stackPositions, splitPositions, gridPositions } = require('../layout-engine');
+const { stackPositions, splitPositions, gridPositions } = require('../layout/layout-engine');
 
 /** 为布局 slide 预计算位置，存入 block.style */
 function layoutBlocks(ast) {
