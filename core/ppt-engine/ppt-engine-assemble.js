@@ -15,12 +15,13 @@ function generate(params) {
   const table   = require('./table');
   const image   = require('./image');
   const tagexport = require('./tag-export');
-  const { fitChars, truncText, itemHeight } = require('../../templates/layouts/layout-engine');
-
   // 浏览器端需要的布局工具函数（tag-export 渲染时调用）
-  const engineUtils = 'var fitChars = ' + fitChars.toString() + ';\n'
-    + 'var truncText = ' + truncText.toString() + ';\n'
-    + 'var itemHeight = ' + itemHeight.toString() + ';\n';
+  const engineUtils = `
+var textLines=function(t,w,f){if(!t||!w||!f)return 1;var c=Math.floor(w*96/(f*1.0));if(c<1)c=1;return Math.ceil(String(t).length/c);};
+var itemHeight=function(t,w,f){var l=textLines(t,w,f||12);return Math.max(0.28,l*(f||12)/96*2.0+0.04);};
+var fitChars=function(bW,bH,f,lh){var c=Math.floor((bW||8.5)*96/(f||13)/0.7);var m=Math.max(1,Math.floor((bH||0.4)*96/((f||13)*(lh||1.6))));return{cpl:c,maxLines:m,total:c*m};};
+var truncText=function(t,m){if(!t||t.length<=m)return t;return t.slice(0,m-1).replace(/\\s+$/,'')+'…';};
+`;
 
   let code = [core, waterfall, chart, text, table, image, engineUtils, tagexport].join('\n');
 

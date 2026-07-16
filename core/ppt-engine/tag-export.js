@@ -238,14 +238,6 @@ function addTagSlidePptx(pptx, s) {
         });
       } catch(e) {}
     }
-  }  // end renderBlock
-
-  // 非布局 slide：逐 block 渲染
-  s.blocks.forEach(function(block) {
-    var st = block.style || {};
-    var tag = block.tag;
-    var rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
-    renderBlock(slide, block, rect);
   });
 }
 `;
