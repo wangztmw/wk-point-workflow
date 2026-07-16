@@ -249,18 +249,25 @@ function addTagSlidePptx(pptx, s) {
     else if (tag === 'list') {
       var fs = Number(st['font-size']) || 12;
       var items = block.data.items || [];
+      // 每项高度: 根据列宽和字号估算行数（中文宽≈字号）
+      var itemW = rect.w - 0.2;  // 英寸
+      var cpl = Math.floor(itemW * 96 / (fs * 1.0));  // 每行字符数
+      if (cpl < 1) cpl = 1;
       var iy = rect.y;
       items.forEach(function(item) {
         if (iy > rect.y + rect.h - 0.1) return;
+        var t = item.text || '';
+        var lines = Math.ceil(t.length / cpl);
+        var itemH = Math.max(0.28, lines * fs / 96 * 2.0 + 0.04);  // 至少0.28,多行加高
         var prefix = block.data.ordered ? '1. ' : '\\u25b8  ';
         var runs = [{ text: prefix, options: { color: '667eea', fontSize: fs } }];
         if (item.runs) runs = runs.concat(item.runs);
         else runs.push({ text: item.text || '', options: { fontSize: fs, color: st.color || '444444' } });
         slide.addText(runs, {
-          x: rect.x + 0.1, y: iy, w: rect.w - 0.2, h: 0.28,
+          x: rect.x + 0.1, y: iy, w: rect.w - 0.2, h: itemH,
           fontSize: fs, fontFace: 'Microsoft YaHei'
         });
-        iy += 0.26;
+        iy += itemH + 0.02;
       });
     }
     else if (tag === 'table') {
