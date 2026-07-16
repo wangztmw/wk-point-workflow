@@ -20,7 +20,7 @@ function render(leftEls, rightEls, title, ratio, config) {
       const h = Math.min((el.style && el.style.h) || 40, colH - y);
       const html = el.render({ ...(el.style || {}), x: 0, y, w: colW, h });
       y += h + 8;
-      return `<div data-block="${startIdx + i}">${html}</div>`;
+      return html.replace('style="', 'data-block="' + (startIdx + i) + '" style="');
     }).join('');
   }
 

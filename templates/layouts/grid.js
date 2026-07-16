@@ -18,7 +18,7 @@ function render(elements, cols, title, config) {
 
   const cardsHTML = elements.map((el, i) => {
     const elStyle = { ...(el.style || {}), w: cardW, h: cardH };
-    return `<div data-block="${i}" style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
+    return '<div data-block="' + i + '" style="position:relative;width:' + cardW + 'px;height:' + cardH + 'px;overflow:hidden;">' + el.render(elStyle) + '</div>';
   }).join('');
 
   return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);padding:${startY}px 40px 20px;">

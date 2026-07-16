@@ -18,7 +18,8 @@ function render(elements, title, config) {
     const elStyle = { ...(el.style || {}), x: el.style?.x || 40, y, w: el.style?.w || 880, h };
     const html = el.render(elStyle);
     y += h + gap;
-    return `<div data-block="${i}">${html}</div>`;
+    // 在第一个 style 属性后插入 data-block
+    return html.replace('style="', 'data-block="' + i + '" style="');
   }).join('\n');
 
   return `<div class="slide" data-slide="${config.slideIndex||0}" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
