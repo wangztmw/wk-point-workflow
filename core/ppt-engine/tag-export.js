@@ -5,13 +5,6 @@ module.exports = `
 
 function pxToIn(px) { return (Number(px) || 0) / 96; }
 
-// 文字自适应：估算文本框能容纳的最大字符数
-function fitChars(boxW, boxH, fs, lh) {
-  var cpl = Math.floor((boxW||820) / (fs||13) / 0.7);      // 每行字符数
-  var maxLines = Math.max(1, Math.floor((boxH||40) / ((fs||13) * (lh||1.6))));  // 最大行数
-  return { cpl: cpl, maxLines: maxLines, total: cpl * maxLines };
-}
-
 // 多元素slide中的瀑布图：柱形+轴线+连接线渲染到已有slide
 function renderWaterfallBars(slide, rect, tbl) {
   var rows = tbl.rows || [];
@@ -83,48 +76,6 @@ function renderWaterfallBars(slide, rect, tbl) {
 }
 
 // 根据框宽+字号+文本长度估算实际高度（英寸）
-function estBlockH(block, boxW) {
-  var w = boxW || 8.5;  // 英寸，split=4.2, stack=8.8
-  var tag = block.tag;
-  var st = block.style || {};
-  var fs = Number(st['font-size']);
-
-  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
-    return (fs||(tag==='h1'?32:tag==='h2'?24:16)) / 96 * 1.6 + 0.08;
-  }
-  if (tag === 'p') {
-    var text = (block.data && block.data.text) || '';
-    if (!text) return 0.3;
-    var cpl = Math.floor(w * 96 / ((fs||13) * 1.0));  // 中文字宽≈字号
-    if (cpl < 1) cpl = 1;
-    var lines = Math.ceil(text.length / cpl);
-    return Math.max(0.45, lines * (fs||13) / 96 * 2.0 + 0.12);
-  }
-  if (tag === 'list') {
-    var items = (block.data && block.data.items) || [];
-    if (!items.length) return 0.3;
-    var totalH = 0;
-    items.forEach(function(item){
-      var t = typeof item === 'string' ? item : (item.text||'');
-      var cpl = Math.floor(w * 96 / ((fs||12) * 1.0));
-      if (cpl < 1) cpl = 1;
-      var lines = Math.ceil(t.length / cpl);
-      totalH += Math.max(0.28, lines * (fs||12) / 96 * 2.2 + 0.06);
-    });
-    return Math.max(0.40, totalH + 0.08);
-  }
-  if (tag === 'img')      return 1.4;
-  if (tag === 'table')    return ((block.data && block.data.rows) ? block.data.rows.length + 1 : 3) * 0.26;
-  if (tag === 'chart')    return 3.6;
-  if (tag === 'box')      return (Number(st.h)||4) / 96;
-  return 0.4;
-}
-
-function truncText(text, maxChars) {
-  if (!text || text.length <= maxChars) return text;
-  return text.slice(0, maxChars - 1).replace(/\\s+$/, '') + '\\u2026';
-}
-
 function addTagSlidePptx(pptx, s) {
   // 瀑布图：委托专门的形状拼凑函数（它自己创建 slide）
   if (s.blocks && s.blocks.length === 1 && s.blocks[0].tag === 'chart') {

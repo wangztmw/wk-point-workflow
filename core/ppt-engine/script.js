@@ -15,8 +15,16 @@ function generate(params) {
   const table   = require('./table');
   const image   = require('./image');
   const tagexport = require('./tag-export');
+  const layoutEngine = require('../../templates/layouts/layout-engine');
 
-  let code = [core, waterfall, chart, text, table, image, tagexport].join('\n');
+  // layout-engine 只导出函数定义，包裹成浏览器可执行代码
+  const layoutEngineCode = 'var blockHeight = ' + layoutEngine.blockHeight.toString() + ';\n'
+    + 'var itemHeight = ' + layoutEngine.itemHeight.toString() + ';\n'
+    + 'var textLines = ' + layoutEngine.textLines.toString() + ';\n'
+    + 'var fitChars = ' + layoutEngine.fitChars.toString() + ';\n'
+    + 'var truncText = ' + layoutEngine.truncText.toString() + ';\n';
+
+  let code = [core, waterfall, chart, text, table, image, layoutEngineCode, tagexport].join('\n');
 
   // 占位符替换（browser-code.txt 中残留的）
   code = code.replace(/__SLIDE_DATA__/g, params.slideDataJSON);
