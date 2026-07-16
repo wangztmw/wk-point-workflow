@@ -83,12 +83,11 @@ function renderWaterfallBars(slide, rect, tbl) {
 }
 
 // 根据框宽+字号+文本长度估算实际高度（英寸）
-function estBlockH(block) {
+function estBlockH(block, boxW) {
+  var w = boxW || 8.5;  // 英寸，split=4.2, stack=8.8
   var tag = block.tag;
   var st = block.style || {};
   var fs = Number(st['font-size']);
-  // 默认框宽：split 用 4.2in(403px)，stack 用 8.8in(845px)
-  var boxW = 8.5;  // 英寸
 
   if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
     return (fs||(tag==='h1'?32:tag==='h2'?24:16)) / 96 * 1.6;
@@ -96,7 +95,7 @@ function estBlockH(block) {
   if (tag === 'p') {
     var text = (block.data && block.data.text) || '';
     if (!text) return 0.3;
-    var lines = Math.ceil(text.length / Math.floor(boxW * 96 / ((fs||13) * 0.7)));
+    var lines = Math.ceil(text.length / Math.floor(w * 96 / ((fs||13) * 0.7)));
     return Math.max(0.35, lines * (fs||13) / 96 * 1.8 + 0.1);
   }
   if (tag === 'list') {
@@ -105,7 +104,7 @@ function estBlockH(block) {
     var totalH = 0;
     items.forEach(function(item){
       var t = typeof item === 'string' ? item : (item.text||'');
-      var lines = Math.ceil(t.length / Math.floor(boxW * 96 / ((fs||12) * 0.7)));
+      var lines = Math.ceil(t.length / Math.floor(w * 96 / ((fs||12) * 0.7)));
       totalH += Math.max(0.22, lines * (fs||12) / 96 * 1.8 + 0.03);
     });
     return Math.max(0.35, totalH + 0.06);
@@ -177,11 +176,12 @@ function addTagSlidePptx(pptx, s) {
     var rect;
     if (isLayoutSlide) {
       var isRight = s.type === 'split' && i >= splitMid;
-      var h = estBlockH(block);
+      var colW = s.type === 'split' ? 4.2 : 8.8;
+      var h = estBlockH(block, colW);
       rect = {
         x: isRight ? 5.1 : layoutX,
         y: isRight ? layoutRY : layoutY,
-        w: s.type === 'split' ? 4.2 : layoutW,
+        w: colW,
         h: h
       };
       if (isRight) layoutRY += h + layoutGap;
