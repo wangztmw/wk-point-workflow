@@ -138,18 +138,36 @@ function addTagSlidePptx(pptx, s) {
 
   if (!s.blocks) return;
   var layoutY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
+  var layoutRY = layoutY;  // split 右栏光标
   var layoutX = isLayoutSlide ? 0.6 : 0;
   var layoutW = isLayoutSlide ? 8.8 : 0;
   var layoutGap = 0.08;
-  s.blocks.forEach(function(block) {
+  // split：计算中点（与 HTML 端 split-slide.js 一致）
+  var splitMid = 0;
+  if (s.type === 'split') {
+    var n = s.blocks.length;
+    splitMid = Math.ceil(n / 2);
+    for (var tryMid = splitMid; tryMid > 0; tryMid--) {
+      var prev = s.blocks[tryMid - 1], cur = s.blocks[tryMid];
+      if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
+      splitMid = tryMid; break;
+    }
+  }
+  s.blocks.forEach(function(block, i) {
     var st = block.style || {};
     var tag = block.tag;
     var rect;
     if (isLayoutSlide) {
-      // 高度按内容估算，给足余量
+      var isRight = s.type === 'split' && i >= splitMid;
       var h = estBlockH(block);
-      rect = { x: layoutX, y: layoutY, w: layoutW, h: h };
-      layoutY += h + layoutGap;
+      rect = {
+        x: isRight ? 5.1 : layoutX,
+        y: isRight ? layoutRY : layoutY,
+        w: s.type === 'split' ? 4.2 : layoutW,
+        h: h
+      };
+      if (isRight) layoutRY += h + layoutGap;
+      else layoutY += h + layoutGap;
     } else {
       rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
     }
