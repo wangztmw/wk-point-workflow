@@ -158,11 +158,9 @@ function addTagSlidePptx(pptx, s) {
   }
 
   if (!s.blocks) return;
-  var layoutY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
-  var layoutRY = layoutY;  // split 右栏光标
-  var layoutX = isLayoutSlide ? 0.6 : 0;
-  var layoutW = isLayoutSlide ? 8.8 : 0;
-  var layoutGap = 0.08;
+  var slideH = 5.2;  // PPT 可用高度（英寸）
+  var startY = isLayoutSlide ? (s.title ? 0.55 : 0.3) : 0;
+  var gap = 0.06;
   // split：计算中点（与 HTML 端 split-slide.js 一致）
   var splitMid = 0;
   if (s.type === 'split') {
@@ -173,24 +171,39 @@ function addTagSlidePptx(pptx, s) {
       if (cur && cur.tag === 'list' && prev && (prev.tag === 'h3' || prev.tag === 'h4')) continue;
       splitMid = tryMid; break;
     }
+    // 左右各栏：可用高度均分给该栏元素
+    var leftCount = splitMid;
+    var rightCount = s.blocks.length - splitMid;
+    var lPerH = (slideH - startY - gap * (leftCount - 1)) / Math.max(leftCount, 1);
+    var rPerH = (slideH - startY - gap * (rightCount - 1)) / Math.max(rightCount, 1);
+    var lY = startY, rY = startY;
+    s.blocks.forEach(function(block, i) {
+      var isRight = i >= splitMid;
+      var perH = isRight ? rPerH : lPerH;
+      var colW = 4.2;
+      var curY = isRight ? rY : lY;
+      // 标题用小高度，其他用均分
+      var h = (block.tag === 'h3' || block.tag === 'h4') ? (Number(block.style['font-size'])||15)/96*1.6+0.06 : perH;
+      renderBlock(slide, block, { x: isRight ? 5.1 : 0.6, y: curY, w: colW, h: h });
+      if (isRight) rY += h + gap; else lY += h + gap;
+    });
+    return;
   }
-  s.blocks.forEach(function(block, i) {
+
+  // stack/grid：全部垂直流
+  var perH = (slideH - startY - gap * (s.blocks.length - 1)) / Math.max(s.blocks.length, 1);
+  var layoutY = startY;
+  s.blocks.forEach(function(block) {
+    var h = (block.tag === 'h3' || block.tag === 'h4') ? (Number(block.style['font-size'])||15)/96*1.6+0.06 : perH;
+    renderBlock(slide, block, { x: 0.6, y: layoutY, w: 8.8, h: h });
+    layoutY += h + gap;
+  });
+  return;  // 布局 slide 已处理完毕
+
+  // renderBlock helper（内联）
+  function renderBlock(slide, block, rect) {
     var st = block.style || {};
     var tag = block.tag;
-    var rect;
-    if (isLayoutSlide) {
-      var isRight = s.type === 'split' && i >= splitMid;
-      var colW = s.type === 'split' ? 4.2 : 8.8;
-      var h = estBlockH(block, colW);
-      rect = {
-        x: isRight ? 5.1 : layoutX,
-        y: isRight ? layoutRY : layoutY,
-        w: colW,
-        h: h
-      };
-      if (isRight) layoutRY += h + layoutGap;
-      else layoutY += h + layoutGap;
-    } else {
       rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
     }
 
