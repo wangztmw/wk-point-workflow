@@ -95,8 +95,10 @@ function estBlockH(block, boxW) {
   if (tag === 'p') {
     var text = (block.data && block.data.text) || '';
     if (!text) return 0.3;
-    var lines = Math.ceil(text.length / Math.floor(w * 96 / ((fs||13) * 0.7)));
-    return Math.max(0.35, lines * (fs||13) / 96 * 1.8 + 0.1);
+    var cpl = Math.floor(w * 96 / ((fs||13) * 1.0));  // 中文字宽≈字号
+    if (cpl < 1) cpl = 1;
+    var lines = Math.ceil(text.length / cpl);
+    return Math.max(0.45, lines * (fs||13) / 96 * 2.0 + 0.12);
   }
   if (tag === 'list') {
     var items = (block.data && block.data.items) || [];
@@ -104,8 +106,10 @@ function estBlockH(block, boxW) {
     var totalH = 0;
     items.forEach(function(item){
       var t = typeof item === 'string' ? item : (item.text||'');
-      var lines = Math.ceil(t.length / Math.floor(w * 96 / ((fs||12) * 0.7)));
-      totalH += Math.max(0.22, lines * (fs||12) / 96 * 1.8 + 0.03);
+      var cpl = Math.floor(w * 96 / ((fs||12) * 1.0));
+      if (cpl < 1) cpl = 1;
+      var lines = Math.ceil(t.length / cpl);
+      totalH += Math.max(0.26, lines * (fs||12) / 96 * 2.0 + 0.04);
     });
     return Math.max(0.35, totalH + 0.06);
   }
