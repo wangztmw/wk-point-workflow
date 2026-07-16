@@ -90,7 +90,7 @@ function estBlockH(block, boxW) {
   var fs = Number(st['font-size']);
 
   if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
-    return (fs||(tag==='h1'?32:tag==='h2'?24:16)) / 96 * 1.6;
+    return (fs||(tag==='h1'?32:tag==='h2'?24:16)) / 96 * 1.6 + 0.08;
   }
   if (tag === 'p') {
     var text = (block.data && block.data.text) || '';
@@ -109,9 +109,9 @@ function estBlockH(block, boxW) {
       var cpl = Math.floor(w * 96 / ((fs||12) * 1.0));
       if (cpl < 1) cpl = 1;
       var lines = Math.ceil(t.length / cpl);
-      totalH += Math.max(0.26, lines * (fs||12) / 96 * 2.0 + 0.04);
+      totalH += Math.max(0.28, lines * (fs||12) / 96 * 2.2 + 0.06);
     });
-    return Math.max(0.35, totalH + 0.06);
+    return Math.max(0.40, totalH + 0.08);
   }
   if (tag === 'img')      return 1.4;
   if (tag === 'table')    return ((block.data && block.data.rows) ? block.data.rows.length + 1 : 3) * 0.26;
