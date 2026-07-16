@@ -204,8 +204,6 @@ function addTagSlidePptx(pptx, s) {
   function renderBlock(slide, block, rect) {
     var st = block.style || {};
     var tag = block.tag;
-      rect = { x: pxToIn(st.x), y: pxToIn(st.y), w: pxToIn(st.w || 820), h: pxToIn(st.h || 40) };
-    }
 
     if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') {
       var fs = Number(st['font-size']) || (tag==='h1'?32:tag==='h2'?24:tag==='h3'?18:15);
