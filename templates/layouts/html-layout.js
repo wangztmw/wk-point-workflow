@@ -1,0 +1,207 @@
+/**
+ * html-layout.js — HTML 布局统一入口
+ *
+ * 三个布局函数均接收标准接口 render(ast, config)，
+ * 内部调用共享的 blockToEl + 排列逻辑。
+ */
+
+const heading = require('../elements/text/heading');
+const paragraph = require('../elements/text/paragraph');
+const list = require('../elements/text/list');
+const image = require('../elements/visual/image');
+const box = require('../elements/visual/box');
+const table = require('../elements/data/table');
+const waterfall = require('../elements/data/waterfall');
+const chartShell = require('../elements/data/chart-shell');
+const pageTitle = require('../elements/text/page-title');
+
+// ============================================================
+// 共享：block → element
+// ============================================================
+
+function blockToEl(block) {
+  const style = block.style || {};
+  const tag = block.tag;
+  switch (tag) {
+    case 'h1': case 'h2': case 'h3': case 'h4':
+      return { tag, render: (s) => heading.render(parseInt(tag[1]), block.data.text, s), style };
+    case 'p':
+      return { tag, render: (s) => paragraph.render(block.data.text, block.data.inlineMarkup, s), style };
+    case 'list':
+      return { tag, render: (s) => list.render(block.data.items, block.data.ordered, s), style };
+    case 'img':
+      return { tag, render: (s) => image.render(block.data.src, block.data.label, s), style };
+    case 'box':
+      return { tag, render: (s) => box.render(s), style };
+    case 'table':
+      return { tag, render: (s) => table.render(block.data.headers, block.data.rows, s), style };
+    case 'chart': {
+      const ct = style.chartType || 'bar';
+      return { tag, render: (s) => {
+        const rows = (block.data.rows || []).map(r => ({ name: r[0], value: parseFloat(r[1]) || 0 }));
+        if (ct === 'waterfall') return waterfall.render(rows, '', 'wf_html', s);
+        const opt = { tooltip:{}, xAxis:{type:'category',data:rows.map(r=>r.name)}, yAxis:{}, series:[{type:ct,data:rows.map(r=>r.value)}] };
+        return chartShell.render('chart_html', opt, s);
+      }, style };
+    }
+    default: return null;
+  }
+}
+
+// ============================================================
+// Stack — 垂直堆叠
+// ============================================================
+
+function renderStack(ast, config) {
+  const blocks = ast.content.blocks || [];
+  const title = ast.props.title || '';
+  const elements = [];
+
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i], tag = b.tag, style = b.style || {};
+
+    // H3/H4 + 紧随的 list → 合并为段
+    if ((tag === 'h3' || tag === 'h4') && i + 1 < blocks.length && blocks[i + 1].tag === 'list') {
+      const hBlock = b, listBlock = blocks[i + 1];
+      elements.push({
+        render: (s) => {
+          const hStyle = { ...s, h: 22 };
+          const lStyle = { ...s, y: (s.y || 0) + 20, h: s.h - 20 };
+          return heading.render(parseInt(hBlock.tag[1]), hBlock.data.text, hStyle)
+               + list.render(listBlock.data.items, listBlock.data.ordered, lStyle);
+        },
+        style: { h: 60 + (listBlock.data.items.length * 16) },
+      });
+      i += 2; continue;
+    }
+
+    // H3/H4 + 紧随的 p → 合并
+    if ((tag === 'h3' || tag === 'h4') && i + 1 < blocks.length && blocks[i + 1].tag === 'p') {
+      const hBlock = b, pBlock = blocks[i + 1];
+      elements.push({
+        render: (s) => {
+          const hStyle = { ...s, h: 22 };
+          const pStyle = { ...s, y: (s.y || 0) + 20, h: s.h - 20 };
+          return heading.render(parseInt(hBlock.tag[1]), hBlock.data.text, hStyle)
+               + paragraph.render(pBlock.data.text, pBlock.data.inlineMarkup, pStyle);
+        },
+        style: { h: 50 },
+      });
+      i += 2; continue;
+    }
+
+    // 单元素
+    const el = blockToEl(b);
+    if (el) {
+      if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') el.style = { h: 30, ...style };
+      else if (tag === 'p') el.style = { h: 28, ...style };
+      else if (tag === 'list') el.style = { h: (b.data.items || []).length * 22, ...style };
+      else if (tag === 'img') el.style = { h: 120, ...style };
+      else if (tag === 'table') el.style = { h: ((b.data.rows || []).length + 1) * 22, ...style };
+      else if (tag === 'chart') el.style = { h: 320, ...style };
+      elements.push(el);
+    }
+    i++;
+  }
+
+  // 排列
+  const startY = title ? 70 : 30;
+  let y = startY;
+  const gap = 12;
+  const parts = elements.map(el => {
+    const h = (el.style && el.style.h) || 40;
+    const elStyle = { ...(el.style || {}), x: el.style?.x || 40, y, w: el.style?.w || 880, h };
+    const html = el.render(elStyle);
+    y += h + gap;
+    return html;
+  }).join('\n');
+
+  return `<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
+    ${title ? `<div style="position:absolute;left:40px;top:20px;">${pageTitle.render(title)}</div>` : ''}
+    ${parts}
+  </div>`;
+}
+
+// ============================================================
+// Split — 左右分栏
+// ============================================================
+
+function renderSplit(ast, config) {
+  const blocks = ast.content.blocks || [];
+  const title = ast.props.title || '';
+
+  const raw = blocks.map(blockToEl).filter(Boolean);
+
+  // 找最优分割点：不拆散 H3+list 对
+  let mid = Math.ceil(raw.length / 2);
+  for (let tryMid = mid; tryMid > 0; tryMid--) {
+    if (raw[tryMid] && raw[tryMid].tag === 'list' && tryMid > 0
+        && (raw[tryMid - 1].tag === 'h3' || raw[tryMid - 1].tag === 'h4')) continue;
+    mid = tryMid; break;
+  }
+
+  const leftEls = raw.slice(0, mid);
+  const rightEls = raw.slice(mid);
+
+  const gap = 20;
+  const startY = title ? 80 : 24;
+  const availW = 920, availH = 540 - startY - 20;
+  const leftW = Math.floor(availW * 0.5 - gap / 2);
+  const rightW = availW - leftW - gap;
+
+  function colHTML(els, colW, colH) {
+    let y = 0;
+    return els.map(el => {
+      const h = Math.min((el.style && el.style.h) || 40, colH - y);
+      const html = el.render({ ...(el.style || {}), x: 0, y, w: colW, h });
+      y += h + 8;
+      return html;
+    }).join('');
+  }
+
+  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
+    ${title ? pageTitle.render(title) : ''}
+    <div style="display:flex;gap:${gap}px;${title ? 'margin-top:12px;' : ''}height:${availH}px;">
+      <div style="width:${leftW}px;position:relative;overflow:hidden;">${colHTML(leftEls || [], leftW, availH)}</div>
+      <div style="width:2px;background:var(--color-border);flex-shrink:0;"></div>
+      <div style="width:${rightW}px;position:relative;overflow:hidden;">${colHTML(rightEls || [], rightW, availH)}</div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// Grid — 网格排列
+// ============================================================
+
+function renderGrid(ast, config) {
+  const blocks = ast.content.blocks || [];
+  const title = ast.props.title || '';
+
+  const elements = blocks.map(blockToEl).filter(Boolean);
+  const n = elements.length;
+  const c = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
+  const gap = 14;
+  const startY = title ? 80 : 24;
+  const availW = 880, availH = 540 - startY - 20;
+  const cardW = (availW - gap * (c - 1)) / c;
+  const cardH = (availH - gap * (Math.ceil(n / c) - 1)) / Math.ceil(n / c);
+
+  const cardsHTML = elements.map(el => {
+    const elStyle = { ...(el.style || {}), w: cardW, h: cardH };
+    return `<div style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
+  }).join('');
+
+  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
+    ${title ? pageTitle.render(title) : ''}
+    <div style="display:grid;grid-template-columns:repeat(${c},${cardW}px);gap:${gap}px;justify-content:center;${title ? 'margin-top:12px;' : ''}">
+      ${cardsHTML}
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// 导出
+// ============================================================
+
+module.exports = { renderStack, renderSplit, renderGrid };
