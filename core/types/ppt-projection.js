@@ -33,27 +33,8 @@ function toRuns(nodes) {
 // 投影函数（每种类型一个）
 // ============================================================
 
-const { stackPositions, splitPositions, gridPositions } = require('../layout/layout-engine');
-
-/** 为布局 slide 预计算位置，存入 block.style */
-function layoutBlocks(ast) {
-  var blocks = ast.content.blocks || [];
-  var t = ast.type;
-  if (t !== 'stack' && t !== 'grid' && t !== 'split') return blocks;
-  var startY = ast.props.title ? 0.55 : 0.3;
-  var positions;
-  if (t === 'stack') positions = stackPositions(blocks, { startY: startY });
-  else if (t === 'split') positions = splitPositions(blocks, { startY: startY });
-  else if (t === 'grid') positions = gridPositions(blocks, { startY: startY });
-  return blocks.map(function(b, i) {
-    var p = positions[i] || {};
-    return { ...b, style: { ...(b.style || {}), x: p.x, y: p.y, w: p.w, h: p.h } };
-  });
-}
-
 function projectTag(ast) {
-  var rawBlocks = layoutBlocks(ast);
-  var blocks = rawBlocks.map(b => {
+  var blocks = ast.content.blocks.map(b => {
     let data;
     if (b.tag === 'img') {
       data = { src: b.data.src || '', label: b.data.label || '' };
