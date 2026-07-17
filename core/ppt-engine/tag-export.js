@@ -96,7 +96,7 @@ function addTagSlidePptx(pptx, s) {
   }
 
   var slide = pptx.addSlide();
-  // DARK_SLIDE_TYPES 来自 types/html-projection.js，嵌入 SLIDE_DATA 常量区
+  // DARK_SLIDE_TYPES 来自 types/ppt-projection.js，嵌入 SLIDE_DATA 常量区
   var DARK_TYPES = __DARK_TYPES__;
   var isDark = DARK_TYPES.indexOf(s.type) >= 0;
   if (isDark) slide.background = { fill: '1a1a2e' };
