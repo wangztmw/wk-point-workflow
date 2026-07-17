@@ -140,7 +140,7 @@ function resolveImageFromFolders(ast, projectDir) {
     resolveTagImages(ast, projectDir);
     return;
   }
-  const { IMAGE_SLIDE_TYPES } = require('../types/ppt-projection');
+  const { IMAGE_SLIDE_TYPES } = require('../types/html-projection');
   const imageTypes = IMAGE_SLIDE_TYPES;
   if (!projectDir || !imageTypes.includes(ast.type)) return;
 
@@ -275,11 +275,11 @@ function generateThemeCSS(config) {
  * 从 SlideAST 数组中提取图表数据
  * 供浏览器端 PptxGenJS 原生图表导出使用
  */
-// 从 types/ppt-projection 导入（唯一真相源）
-const { cleanMD, toRuns } = require('../types/ppt-projection');
+// 从 types/html-projection 导入（唯一真相源）
+const { cleanMD, toRuns } = require('../types/html-projection');
 
 function extractAllSlideData(slides, config) {
-  const { PROJECTION } = require('../types/ppt-projection');
+  const { PROJECTION } = require('../types/html-projection');
   const all = [];
 
   for (const ast of slides) {
@@ -312,7 +312,7 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
   );
 
   const { generate: generatePptScript } = require('../ppt-engine/ppt-engine-assemble');
-  const { DARK_SLIDE_TYPES } = require('../types/ppt-projection');
+  const { DARK_SLIDE_TYPES } = require('../types/html-projection');
   const pptScript = generatePptScript({
     slideDataJSON, chartDataJSON, colorsJSON,
     backgroundJSON: config.background ? JSON.stringify(config.background) : 'null',
