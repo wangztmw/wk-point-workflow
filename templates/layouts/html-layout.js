@@ -114,8 +114,10 @@ function renderStack(ast, config) {
       w: Math.round((s.w !== undefined ? Number(s.w) : 8.8) * 96) + 'px',
       h: Math.round((s.h !== undefined ? Number(s.h) : 0.4) * 96) + 'px',
     };
+    var pw = Math.round((s.w !== undefined ? Number(s.w) : 8.8) * 96);
+    var ph = Math.round((s.h !== undefined ? Number(s.h) : 0.4) * 96);
     return '<div style="position:absolute;left:' + pos.x + ';top:' + pos.y + ';width:' + pos.w + ';height:' + pos.h + ';overflow:hidden;">'
-      + el.render({ x: 0, y: 0, w: Number(s.w)||880, h: Number(s.h)||40 }) + '</div>';
+      + el.render({ x: 0, y: 0, w: pw, h: ph }) + '</div>';
   }).join('\n');
 
   return `<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
@@ -153,9 +155,12 @@ function renderSplit(ast, config) {
 
   function colHTML(els, colW, colH) {
     let y = 0;
+    // colW/colH 是像素，el.style 是英寸→×96
     return els.map(el => {
-      const h = Math.min((el.style && el.style.h) || 40, colH - y);
-      const html = el.render({ ...(el.style || {}), x: 0, y, w: colW, h });
+      var es = el.style || {};
+      var eh = es.h !== undefined ? Math.round(Number(es.h) * 96) : 40;
+      var h = Math.min(eh, colH - y);
+      var html = el.render({ x: 0, y, w: colW, h: h, 'font-size': es['font-size'], color: es.color, align: es.align });
       y += h + 8;
       return html;
     }).join('');
@@ -189,7 +194,10 @@ function renderGrid(ast, config) {
   const cardH = (availH - gap * (Math.ceil(n / c) - 1)) / Math.ceil(n / c);
 
   const cardsHTML = elements.map(el => {
-    const elStyle = { ...(el.style || {}), w: cardW, h: cardH };
+    var es = el.style || {};
+    var eh = es.h !== undefined ? Math.round(Number(es.h) * 96) : cardH;
+    var ew = es.w !== undefined ? Math.round(Number(es.w) * 96) : cardW;
+    var elStyle = { x: 0, y: 0, w: ew, h: eh, 'font-size': es['font-size'], color: es.color, align: es.align };
     return `<div style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
   }).join('');
 
