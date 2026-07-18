@@ -164,11 +164,32 @@ function truncText(text, maxChars) {
 }
 
 // ============================================================
+// 布局应用：给 AST 的 blocks 预计算位置
+// ============================================================
+
+/** 为布局 slide 的 blocks 计算位置，直接修改 block.style */
+function applyLayout(ast) {
+  var blocks = ast.content.blocks || [];
+  var t = ast.type;
+  if (t !== 'stack' && t !== 'grid' && t !== 'split') return;
+  var startY = ast.props.title ? 0.55 : 0.3;
+  var positions;
+  if (t === 'stack') positions = stackPositions(blocks, { startY: startY });
+  else if (t === 'split') positions = splitPositions(blocks, { startY: startY });
+  else if (t === 'grid') positions = gridPositions(blocks, { startY: startY });
+  for (var i = 0; i < blocks.length; i++) {
+    var p = positions[i] || {};
+    blocks[i].style = { ...(blocks[i].style || {}), x: p.x, y: p.y, w: p.w, h: p.h };
+  }
+}
+
+// ============================================================
 // 导出
 // ============================================================
 
 module.exports = {
   blockHeight, itemHeight, textLines,
   stackPositions, splitPositions, gridPositions,
+  applyLayout,
   fitChars, truncText,
 };

@@ -280,23 +280,12 @@ const { cleanMD, toRuns } = require('../types/ppt-extract');
 
 function extractAllSlideData(slides, config) {
   const { PROJECTION } = require('../types/ppt-extract');
-  const { stackPositions, splitPositions, gridPositions } = require('../layout/layout-engine');
+  const { applyLayout } = require('../layout/layout-engine');
   const all = [];
 
   for (const ast of slides) {
-    // 布局 slide：预计算位置，写入 block.style（投影层只做数据提取）
-    if (ast.parser === 'tag' && (ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split')) {
-      var t = ast.type, blocks = ast.content.blocks || [];
-      var startY = ast.props.title ? 0.55 : 0.3;
-      var positions;
-      if (t === 'stack') positions = stackPositions(blocks, { startY: startY });
-      else if (t === 'split') positions = splitPositions(blocks, { startY: startY });
-      else if (t === 'grid') positions = gridPositions(blocks, { startY: startY });
-      for (var i = 0; i < blocks.length; i++) {
-        var p = positions[i] || {};
-        blocks[i].style = { ...(blocks[i].style || {}), x: p.x, y: p.y, w: p.w, h: p.h };
-      }
-    }
+    // 布局 slide：预计算位置（layout-engine 负责）
+    applyLayout(ast);
 
     const base = {
       index: ast.index,
