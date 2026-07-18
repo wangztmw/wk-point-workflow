@@ -81,6 +81,10 @@ function render(slides, userConfig) {
   // 生成自定义 CSS 变量
   const customCSS = generateThemeCSS(config);
 
+  // 布局预计算：给 layout slide 的 blocks 算好 x/y/w/h（HTML 和 PPT 共用）
+  const { applyLayout } = require('../layout/layout-engine');
+  for (const ast of slides) { applyLayout(ast); }
+
   // 图片文件夹解析：对 image-* 类型，从 images/<label>/ 子文件夹读取图片
   const projectDir = config.projectDir || null;
   for (const ast of slides) {
@@ -280,13 +284,9 @@ const { cleanMD, toRuns } = require('../types/ppt-extract');
 
 function extractAllSlideData(slides, config) {
   const { PROJECTION } = require('../types/ppt-extract');
-  const { applyLayout } = require('../layout/layout-engine');
   const all = [];
 
   for (const ast of slides) {
-    // 布局 slide：预计算位置（layout-engine 负责）
-    applyLayout(ast);
-
     const base = {
       index: ast.index,
       type: ast.type,

@@ -105,16 +105,17 @@ function renderStack(ast, config) {
     i++;
   }
 
-  // 排列
-  const startY = title ? 70 : 30;
-  let y = startY;
-  const gap = 12;
+  // 排列：读布局引擎预计算的位置（英寸→像素 ×96）
   const parts = elements.map(el => {
-    const h = (el.style && el.style.h) || 40;
-    const elStyle = { ...(el.style || {}), x: el.style?.x || 40, y, w: el.style?.w || 880, h };
-    const html = el.render(elStyle);
-    y += h + gap;
-    return html;
+    var s = el.style || {};
+    var pos = {
+      x: Math.round((s.x !== undefined ? Number(s.x) : 0.6) * 96) + 'px',
+      y: Math.round((s.y !== undefined ? Number(s.y) : 0) * 96) + 'px',
+      w: Math.round((s.w !== undefined ? Number(s.w) : 8.8) * 96) + 'px',
+      h: Math.round((s.h !== undefined ? Number(s.h) : 0.4) * 96) + 'px',
+    };
+    return '<div style="position:absolute;left:' + pos.x + ';top:' + pos.y + ';width:' + pos.w + ';height:' + pos.h + ';overflow:hidden;">'
+      + el.render({ x: 0, y: 0, w: Number(s.w)||880, h: Number(s.h)||40 }) + '</div>';
   }).join('\n');
 
   return `<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
