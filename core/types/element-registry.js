@@ -45,7 +45,7 @@ function pptList(slide, data, style, rect) {
     var t = item.text || '';
     var lines = Math.ceil(t.length / cpl);
     var itemH = Math.max(0.28, lines * fs / 96 * 2.0 + 0.04);
-    var prefix = data.ordered ? '1. ' : '\\u25b8  ';
+    var prefix = data.ordered ? '1. ' : '▸  ';
     var runs = [{ text: prefix, options: { color: '667eea', fontSize: fs } }];
     if (item.runs) runs = runs.concat(item.runs);
     else runs.push({ text: t, options: { fontSize: fs, color: style.color || '444444' } });
