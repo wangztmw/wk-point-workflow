@@ -167,10 +167,31 @@ function truncText(text, maxChars) {
 // 布局应用：给 AST 的 blocks 预计算位置
 // ============================================================
 
-/** 为布局 slide 的 blocks 计算位置，直接修改 block.style */
+/** 补全 block.style 的默认值（HTML 和 PPT 都需要） */
+function fillStyleDefaults(block) {
+  var tag = block.tag;
+  var st = block.style || {};
+  var defaultFS = {h1:'32',h2:'24',h3:'18',h4:'16',p:'13',list:'12'};
+  return {
+    x: st.x, y: st.y, w: st.w, h: st.h,
+    'font-size': st['font-size'] || defaultFS[tag] || '13',
+    color: st.color || ((tag==='h1'||tag==='h2')?'1a1a1a':'333333'),
+    bold: st.bold || ((tag==='h1'||tag==='h2')?'true':'false'),
+    align: st.align || 'left',
+    'fill-color': st['fill-color'] || '',
+    'border-color': st['border-color'] || '',
+    'border-width': st['border-width'] || '0',
+  };
+}
+
+/** 为布局 slide 的 blocks 计算位置，补全样式默认值 */
 function applyLayout(ast) {
   var blocks = ast.content.blocks || [];
   var t = ast.type;
+  // 补全所有 block 的样式默认值（无论是不是布局 slide）
+  for (var i = 0; i < blocks.length; i++) {
+    blocks[i].style = fillStyleDefaults(blocks[i]);
+  }
   if (t !== 'stack' && t !== 'grid' && t !== 'split') return;
   var startY = ast.props.title ? 0.55 : 0.3;
   var positions;
@@ -179,7 +200,8 @@ function applyLayout(ast) {
   else if (t === 'grid') positions = gridPositions(blocks, { startY: startY });
   for (var i = 0; i < blocks.length; i++) {
     var p = positions[i] || {};
-    blocks[i].style = { ...(blocks[i].style || {}), x: p.x, y: p.y, w: p.w, h: p.h };
+    var st = blocks[i].style || {};
+    st.x = p.x; st.y = p.y; st.w = p.w; st.h = p.h;
   }
 }
 

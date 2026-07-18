@@ -34,21 +34,9 @@ function toRuns(nodes) {
 // ============================================================
 
 function projectTag(ast) {
+  // block.style 已由 applyLayout 补全默认值 + x/y/w/h，此处只做数据格式转换
   var blocks = ast.content.blocks.map(b => {
     var tag = b.tag;
-    var st = b.style || {};
-    // 补全样式默认值（HTML 和 PPT 都从这里读）
-    var style = {
-      x: st.x, y: st.y, w: st.w, h: st.h,
-      'font-size': st['font-size'] || defaultFS(tag),
-      color: st.color || defaultColor(tag),
-      bold: st.bold || (tag === 'h1' || tag === 'h2' ? 'true' : 'false'),
-      align: st.align || 'left',
-      'fill-color': st['fill-color'] || '',
-      'border-color': st['border-color'] || '',
-      'border-width': st['border-width'] || '0',
-    };
-
     let data;
     if (tag === 'img') {
       data = { src: b.data.src || '', label: b.data.label || '' };
@@ -67,19 +55,9 @@ function projectTag(ast) {
     } else {
       data = b.data;
     }
-    return { tag: tag, style: style, data: data };
+    return { tag: tag, style: b.style, data: data };
   });
   return { parser: 'tag', blocks };
-}
-
-function defaultFS(tag) {
-  if (tag === 'h1') return '32'; if (tag === 'h2') return '24';
-  if (tag === 'h3') return '18'; if (tag === 'h4') return '16';
-  if (tag === 'p') return '13'; if (tag === 'list') return '12';
-  return '13';
-}
-function defaultColor(tag) {
-  return (tag === 'h1' || tag === 'h2') ? '1a1a1a' : '333333';
 }
 
 function projectChart(ast) {
