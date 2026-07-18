@@ -81,9 +81,14 @@ function render(slides, userConfig) {
   // 生成自定义 CSS 变量
   const customCSS = generateThemeCSS(config);
 
-  // 布局预计算：给 layout slide 的 blocks 算好 x/y/w/h（HTML 和 PPT 共用）
-  const { applyLayout } = require('../layout/layout-engine');
-  for (const ast of slides) { applyLayout(ast); }
+  // 布局预计算 + 统一渲染：给所有 block 生成 _html + _ppt + rect
+  const { applyLayout } = require('../render/layout/layout-engine');
+  const { renderBlocks } = require('../render/render');
+  for (const ast of slides) {
+    applyLayout(ast);
+    var isLayout = ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split';
+    renderBlocks(ast.content.blocks, isLayout);
+  }
 
   // 图片文件夹解析：对 image-* 类型，从 images/<label>/ 子文件夹读取图片
   const projectDir = config.projectDir || null;

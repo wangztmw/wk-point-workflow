@@ -3,7 +3,7 @@
  *
  * 从 6 个 .js 模块读取 PptxGenJS 导出函数源码，
  * 拼接 + 占位符替换后包裹为 <script> 块。
- * ppt-engine 是导出逻辑的唯一真相源。
+ * ppt* 函数已移除 — 渲染逻辑集中在 render.js（Node 端）+ executeBlock（浏览器端）。
  */
 
 function generate(params) {
@@ -15,20 +15,15 @@ function generate(params) {
   const table   = require('./table');
   const image   = require('./image');
   const tagexport = require('./tag-export');
-  const { pptHeading, pptParagraph, pptList, pptTable, pptImage, pptBox, pptChart } = require('../types/element-registry');
 
-  // 浏览器端工具函数 + 元素注册表
+  // 浏览器端工具函数（executeBlock 的 addListItems 需要 textLines）
   const engineUtils = `
 var textLines=function(t,w,f){if(!t||!w||!f)return 1;var c=Math.floor(w*96/(f*1.0));if(c<1)c=1;return Math.ceil(String(t).length/c);};
-var itemHeight=function(t,w,f){var l=textLines(t,w,f||12);return Math.max(0.28,l*(f||12)/96*2.0+0.04);};
-var fitChars=function(bW,bH,f,lh){var c=Math.floor((bW||8.5)*96/(f||13)/0.7);var m=Math.max(1,Math.floor((bH||0.4)*96/((f||13)*(lh||1.6))));return{cpl:c,maxLines:m,total:c*m};};
-var truncText=function(t,m){if(!t||t.length<=m)return t;return t.slice(0,m-1).replace(/\\s+$/,'')+'…';};
-var REGISTRY={h1:{ppt:${pptHeading.toString()}},h2:{ppt:${pptHeading.toString()}},h3:{ppt:${pptHeading.toString()}},h4:{ppt:${pptHeading.toString()}},p:{ppt:${pptParagraph.toString()}},list:{ppt:${pptList.toString()}},table:{ppt:${pptTable.toString()}},img:{ppt:${pptImage.toString()}},box:{ppt:${pptBox.toString()}},chart:{ppt:${pptChart.toString()}}};
 `;
 
   let code = [core, waterfall, chart, text, table, image, engineUtils, tagexport].join('\n');
 
-  // 占位符替换（browser-code.txt 中残留的）
+  // 占位符替换
   code = code.replace(/__SLIDE_DATA__/g, params.slideDataJSON);
   code = code.replace(/__CHART_DATA__/g, params.chartDataJSON);
   code = code.replace(/__COLORS__/g, params.colorsJSON);

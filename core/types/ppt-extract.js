@@ -55,7 +55,7 @@ function projectTag(ast) {
     } else {
       data = b.data;
     }
-    return { tag: tag, style: b.style, data: data };
+    return { tag: tag, style: b.style, data: data, _ppt: b._ppt, rect: b.rect };
   });
   return { parser: 'tag', blocks };
 }

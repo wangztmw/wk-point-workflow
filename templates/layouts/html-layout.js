@@ -1,23 +1,12 @@
 /**
  * html-layout.js — HTML 布局统一入口
  *
- * 三个布局函数均接收标准接口 render(ast, config)，
- * 内部调用共享的 blockToEl + 排列逻辑。
+ * 三个布局函数均接收标准接口 render(ast, config)。
+ * block._html(style) 已由 render.js 预绑定，直接调用即可。
+ * 不再查 REGISTRY。
  */
 
 const pageTitle = require('../elements/text/page-title');
-const { REGISTRY } = require('../../../core/types/element-registry');
-
-// ============================================================
-// 共享：block → element（查注册表）
-// ============================================================
-
-function blockToEl(block) {
-  const tag = block.tag;
-  const entry = REGISTRY[tag];
-  if (!entry || !entry.html) return null;
-  return { tag, render: (s) => entry.html(block.data, s), style: block.style || {} };
-}
 
 // ============================================================
 // Stack — 垂直堆叠
@@ -26,18 +15,9 @@ function blockToEl(block) {
 function renderStack(ast, config) {
   const blocks = ast.content.blocks || [];
   const title = ast.props.title || '';
-  const elements = [];
 
-  // 不用合并 H3+list — applyLayout 已给每个 block 独立算了 x/y/w/h
-  for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i];
-    const el = blockToEl(b);
-    if (el) elements.push(el);
-  }
-
-  // 排列：读布局引擎预计算的位置（英寸→像素 ×96）
-  const parts = elements.map(el => {
-    var s = el.style || {};
+  const parts = blocks.map(function(b) {
+    var s = b.style || {};
     var pos = {
       x: Math.round((s.x !== undefined ? Number(s.x) : 0.6) * 96) + 'px',
       y: Math.round((s.y !== undefined ? Number(s.y) : 0) * 96) + 'px',
@@ -46,14 +26,15 @@ function renderStack(ast, config) {
     };
     var pw = Math.round((s.w !== undefined ? Number(s.w) : 8.8) * 96);
     var ph = Math.round((s.h !== undefined ? Number(s.h) : 0.4) * 96);
+    var html = b._html ? b._html({ x: 0, y: 0, w: pw, h: ph }) : '';
     return '<div style="position:absolute;left:' + pos.x + ';top:' + pos.y + ';width:' + pos.w + ';height:' + pos.h + ';overflow:hidden;">'
-      + el.render({ x: 0, y: 0, w: pw, h: ph }) + '</div>';
+      + html + '</div>';
   }).join('\n');
 
-  return `<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">
-    ${title ? `<div style="position:absolute;left:40px;top:20px;">${pageTitle.render(title)}</div>` : ''}
-    ${parts}
-  </div>`;
+  return '<div class="slide" style="background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;">'
+    + (title ? '<div style="position:absolute;left:40px;top:20px;">' + pageTitle.render(title) + '</div>' : '')
+    + parts
+    + '</div>';
 }
 
 // ============================================================
@@ -64,7 +45,7 @@ function renderSplit(ast, config) {
   const blocks = ast.content.blocks || [];
   const title = ast.props.title || '';
 
-  const raw = blocks.map(blockToEl).filter(Boolean);
+  const raw = blocks.filter(function(b) { return typeof b._html === 'function'; });
 
   // 找最优分割点：不拆散 H3+list 对
   let mid = Math.ceil(raw.length / 2);
@@ -85,25 +66,24 @@ function renderSplit(ast, config) {
 
   function colHTML(els, colW, colH) {
     let y = 0;
-    // colW/colH 是像素，el.style 是英寸→×96
-    return els.map(el => {
+    return els.map(function(el) {
       var es = el.style || {};
       var eh = es.h !== undefined ? Math.round(Number(es.h) * 96) : 40;
       var h = Math.min(eh, colH - y);
-      var html = el.render({ x: 0, y, w: colW, h: h, 'font-size': es['font-size'], color: es.color, align: es.align });
+      var html = el._html({ x: 0, y: y, w: colW, h: h, 'font-size': es['font-size'], color: es.color, align: es.align });
       y += h + 8;
       return html;
     }).join('');
   }
 
-  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 20px 20px;">
-    ${title ? pageTitle.render(title) : ''}
-    <div style="display:flex;gap:${gap}px;${title ? 'margin-top:12px;' : ''}height:${availH}px;">
-      <div style="width:${leftW}px;position:relative;overflow:hidden;">${colHTML(leftEls || [], leftW, availH)}</div>
-      <div style="width:2px;background:var(--color-border);flex-shrink:0;"></div>
-      <div style="width:${rightW}px;position:relative;overflow:hidden;">${colHTML(rightEls || [], rightW, availH)}</div>
-    </div>
-  </div>`;
+  return '<div class="slide" style="background:var(--color-bg);padding:' + startY + 'px 20px 20px;">'
+    + (title ? pageTitle.render(title) : '')
+    + '<div style="display:flex;gap:' + gap + 'px;' + (title ? 'margin-top:12px;' : '') + 'height:' + availH + 'px;">'
+    + '<div style="width:' + leftW + 'px;position:relative;overflow:hidden;">' + colHTML(leftEls || [], leftW, availH) + '</div>'
+    + '<div style="width:2px;background:var(--color-border);flex-shrink:0;"></div>'
+    + '<div style="width:' + rightW + 'px;position:relative;overflow:hidden;">' + colHTML(rightEls || [], rightW, availH) + '</div>'
+    + '</div>'
+    + '</div>';
 }
 
 // ============================================================
@@ -114,7 +94,7 @@ function renderGrid(ast, config) {
   const blocks = ast.content.blocks || [];
   const title = ast.props.title || '';
 
-  const elements = blocks.map(blockToEl).filter(Boolean);
+  const elements = blocks.filter(function(b) { return typeof b._html === 'function'; });
   const n = elements.length;
   const c = n <= 2 ? 2 : (n <= 4 ? 2 : 3);
   const gap = 14;
@@ -123,24 +103,20 @@ function renderGrid(ast, config) {
   const cardW = (availW - gap * (c - 1)) / c;
   const cardH = (availH - gap * (Math.ceil(n / c) - 1)) / Math.ceil(n / c);
 
-  const cardsHTML = elements.map(el => {
+  const cardsHTML = elements.map(function(el) {
     var es = el.style || {};
     var eh = es.h !== undefined ? Math.round(Number(es.h) * 96) : cardH;
     var ew = es.w !== undefined ? Math.round(Number(es.w) * 96) : cardW;
     var elStyle = { x: 0, y: 0, w: ew, h: eh, 'font-size': es['font-size'], color: es.color, align: es.align };
-    return `<div style="position:relative;width:${cardW}px;height:${cardH}px;overflow:hidden;">${el.render(elStyle)}</div>`;
+    return '<div style="position:relative;width:' + cardW + 'px;height:' + cardH + 'px;overflow:hidden;">' + el._html(elStyle) + '</div>';
   }).join('');
 
-  return `<div class="slide" style="background:var(--color-bg);padding:${startY}px 40px 20px;">
-    ${title ? pageTitle.render(title) : ''}
-    <div style="display:grid;grid-template-columns:repeat(${c},${cardW}px);gap:${gap}px;justify-content:center;${title ? 'margin-top:12px;' : ''}">
-      ${cardsHTML}
-    </div>
-  </div>`;
+  return '<div class="slide" style="background:var(--color-bg);padding:' + startY + 'px 40px 20px;">'
+    + (title ? pageTitle.render(title) : '')
+    + '<div style="display:grid;grid-template-columns:repeat(' + c + ',' + cardW + 'px);gap:' + gap + 'px;justify-content:center;' + (title ? 'margin-top:12px;' : '') + '">'
+    + cardsHTML
+    + '</div>'
+    + '</div>';
 }
-
-// ============================================================
-// 导出
-// ============================================================
 
 module.exports = { renderStack, renderSplit, renderGrid };
