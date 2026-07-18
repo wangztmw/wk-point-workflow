@@ -57,52 +57,11 @@ function renderStack(ast, config) {
   const title = ast.props.title || '';
   const elements = [];
 
-  let i = 0;
-  while (i < blocks.length) {
-    const b = blocks[i], tag = b.tag, style = b.style || {};
-
-    // H3/H4 + 紧随的 list → 合并为段
-    if ((tag === 'h3' || tag === 'h4') && i + 1 < blocks.length && blocks[i + 1].tag === 'list') {
-      const hBlock = b, listBlock = blocks[i + 1];
-      elements.push({
-        render: (s) => {
-          const hStyle = { ...s, h: 22 };
-          const lStyle = { ...s, y: (s.y || 0) + 20, h: s.h - 20 };
-          return heading.render(parseInt(hBlock.tag[1]), hBlock.data.text, hStyle)
-               + list.render(listBlock.data.items, listBlock.data.ordered, lStyle);
-        },
-        style: { h: 60 + (listBlock.data.items.length * 16) },
-      });
-      i += 2; continue;
-    }
-
-    // H3/H4 + 紧随的 p → 合并
-    if ((tag === 'h3' || tag === 'h4') && i + 1 < blocks.length && blocks[i + 1].tag === 'p') {
-      const hBlock = b, pBlock = blocks[i + 1];
-      elements.push({
-        render: (s) => {
-          const hStyle = { ...s, h: 22 };
-          const pStyle = { ...s, y: (s.y || 0) + 20, h: s.h - 20 };
-          return heading.render(parseInt(hBlock.tag[1]), hBlock.data.text, hStyle)
-               + paragraph.render(pBlock.data.text, pBlock.data.inlineMarkup, pStyle);
-        },
-        style: { h: 50 },
-      });
-      i += 2; continue;
-    }
-
-    // 单元素
+  // 不用合并 H3+list — applyLayout 已给每个 block 独立算了 x/y/w/h
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
     const el = blockToEl(b);
-    if (el) {
-      if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') el.style = { h: 30, ...style };
-      else if (tag === 'p') el.style = { h: 28, ...style };
-      else if (tag === 'list') el.style = { h: (b.data.items || []).length * 22, ...style };
-      else if (tag === 'img') el.style = { h: 120, ...style };
-      else if (tag === 'table') el.style = { h: ((b.data.rows || []).length + 1) * 22, ...style };
-      else if (tag === 'chart') el.style = { h: 320, ...style };
-      elements.push(el);
-    }
-    i++;
+    if (el) elements.push(el);
   }
 
   // 排列：读布局引擎预计算的位置（英寸→像素 ×96）
