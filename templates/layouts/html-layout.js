@@ -5,47 +5,18 @@
  * 内部调用共享的 blockToEl + 排列逻辑。
  */
 
-const heading = require('../elements/text/heading');
-const paragraph = require('../elements/text/paragraph');
-const list = require('../elements/text/list');
-const image = require('../elements/visual/image');
-const box = require('../elements/visual/box');
-const table = require('../elements/data/table');
-const waterfall = require('../elements/data/waterfall');
-const chartShell = require('../elements/data/chart-shell');
 const pageTitle = require('../elements/text/page-title');
+const { REGISTRY } = require('../../../core/types/element-registry');
 
 // ============================================================
-// 共享：block → element
+// 共享：block → element（查注册表）
 // ============================================================
 
 function blockToEl(block) {
-  const style = block.style || {};
   const tag = block.tag;
-  switch (tag) {
-    case 'h1': case 'h2': case 'h3': case 'h4':
-      return { tag, render: (s) => heading.render(parseInt(tag[1]), block.data.text, s), style };
-    case 'p':
-      return { tag, render: (s) => paragraph.render(block.data.text, block.data.inlineMarkup, s), style };
-    case 'list':
-      return { tag, render: (s) => list.render(block.data.items, block.data.ordered, s), style };
-    case 'img':
-      return { tag, render: (s) => image.render(block.data.src, block.data.label, s), style };
-    case 'box':
-      return { tag, render: (s) => box.render(s), style };
-    case 'table':
-      return { tag, render: (s) => table.render(block.data.headers, block.data.rows, s), style };
-    case 'chart': {
-      const ct = style.chartType || 'bar';
-      return { tag, render: (s) => {
-        const rows = (block.data.rows || []).map(r => ({ name: r[0], value: parseFloat(r[1]) || 0 }));
-        if (ct === 'waterfall') return waterfall.render(rows, '', 'wf_html', s);
-        const opt = { tooltip:{}, xAxis:{type:'category',data:rows.map(r=>r.name)}, yAxis:{}, series:[{type:ct,data:rows.map(r=>r.value)}] };
-        return chartShell.render('chart_html', opt, s);
-      }, style };
-    }
-    default: return null;
-  }
+  const entry = REGISTRY[tag];
+  if (!entry || !entry.html) return null;
+  return { tag, render: (s) => entry.html(block.data, s), style: block.style || {} };
 }
 
 // ============================================================
