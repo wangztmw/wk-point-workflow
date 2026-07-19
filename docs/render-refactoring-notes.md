@@ -187,3 +187,62 @@ meta-templates/
 - layout/positions.js — 纯计算：每个 block 应该在哪个位置（英寸）
 - render/slides.js — HTML 包裹：英寸×96→px + div
 - PPT 端直接用 block.rect（英寸），不走 slides.js
+
+---
+
+## 真相源统一：ast.js 的 TAGS
+
+### 问题
+
+加新元素时需要改 3 处：
+
+```
+parser/normalize.js → TAG_STYLE（默认样式）+ 手动 type→tag 映射
+layout/style.js     → defaultFS（默认字号）
+layout/elements.js  → 手动 switch(tag) 分发 + 硬编码默认字号
+```
+
+三份数据说的是同一件事（tag 的默认样式），但没有共享。
+
+### 解决
+
+`meta-templates/types/ast.js` 新增 `TAGS`：
+
+```js
+TAGS: {
+  h1: {fs:'32', color:'1a1a1a', bold:'true'},
+  h2: {fs:'24', color:'1a1a1a', bold:'true'},
+  h3: {fs:'18', color:'333333'},
+  h4: {fs:'15', color:'333333'},
+  p:  {fs:'13', color:'555555'},
+  list: {fs:'12', color:'444444'},
+  table: {fs:'11'},
+  img: {},
+  chart: {},
+},
+```
+
+改后正常化：
+
+```
+normalize.js  → 删 TAG_STYLE，读 AST.TAGS → fromDef() 映射
+style.js      → 删 defaultFS，读 AST.TAGS
+elements.js   → 删硬编码字号，读 AST.TAGS
+```
+
+### 当前状态
+
+TAGS 只有样式默认值。加新元素仍需改 normalize.js（type→tag 映射）和 elements.js（switch case）。下一步理想状态——把 markdown type→tag 映射和 tag→bind 函数也收进 ast.js。
+
+### 加新元素 / 改已有元素
+
+| 操作 | 触及文件 |
+|------|---------|
+| 加新元素 | ① ast.js TAGS + ② elements/xxx.js + ③ layout/elements.js + ④ parser/normalize.js |
+| 改默认样式 | ① ast.js TAGS（唯一入口） |
+| 改布局逻辑 | ① patterns/xxx.js |
+| 加新布局类型 | ① patterns/xxx.js + ② layout/assemble.js + ③ render/html-output.js + ④ normalize.js TYPE_MAP |
+
+### Grid 内容感知不足
+
+当前 grid 只看 block 数量，不识别内容结构（h3+p 成对）。6 个 block 用 3 列会拆散配对内容，4 个 block 用 2 列恰好整齐。下一步需要 grid 识别 block 配对关系。

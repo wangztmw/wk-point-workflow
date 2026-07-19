@@ -19,17 +19,15 @@ var TYPE_MAP = {
 };
 
 // tag 默认样式
-var TAG_STYLE = {
-  h1: {'font-size':'32',color:'1a1a1a',bold:'true'},
-  h2: {'font-size':'24',color:'1a1a1a',bold:'true'},
-  h3: {'font-size':'18',color:'333333'},
-  h4: {'font-size':'15',color:'333333'},
-  p:  {'font-size':'13',color:'555555'},
-  list: {'font-size':'12',color:'444444'},
-  table: {'font-size':'11'},
-  img: {},
-  chart: {},
-};
+var TAG_DEFAULTS = AST.TAGS;
+
+function fromDef(d) {
+  var s = {};
+  if (d.fs) s['font-size'] = d.fs;
+  if (d.color) s.color = d.color;
+  if (d.bold) s.bold = d.bold;
+  return s;
+}
 
 function normalizeToTag(ast) {
   var origType = ast.type;
@@ -57,21 +55,22 @@ function normalizeToTag(ast) {
 
     if (t === 'heading') {
       tag = 'h' + (d.level || 2);
-      style = Object.assign({}, TAG_STYLE[tag] || TAG_STYLE['h2']);
+      var def = TAG_DEFAULTS[tag] || TAG_DEFAULTS['h2'];
+      style = { 'font-size': def.fs, color: def.color, bold: def.bold };
       if (darkColor) style.color = darkColor;
     } else if (t === 'list') {
-      tag = 'list'; style = Object.assign({}, TAG_STYLE.list);
+      tag = 'list'; style = fromDef(TAG_DEFAULTS.list);
       if (darkColor) style.color = darkColor;
     } else if (t === 'paragraph') {
-      tag = 'p'; style = Object.assign({}, TAG_STYLE.p);
+      tag = 'p'; style = fromDef(TAG_DEFAULTS.p);
       if (darkColor) style.color = 'CCCCDD';
     } else if (t === 'table' && ast.type === 'chart') {
-      tag = 'chart'; style = Object.assign({}, TAG_STYLE.chart);
+      tag = 'chart'; style = fromDef(TAG_DEFAULTS.chart);
       style.chartType = ast.props.chartType || ast.props.type || 'bar';
     } else if (t === 'table') {
-      tag = 'table'; style = Object.assign({}, TAG_STYLE.table);
+      tag = 'table'; style = fromDef(TAG_DEFAULTS.table);
     } else if (t === 'image' || t === 'image-tag') {
-      tag = 'img'; style = Object.assign({}, TAG_STYLE.img);
+      tag = 'img'; style = fromDef(TAG_DEFAULTS.img);
       if (d.label) style.label = d.label;
     } else {
       continue;
@@ -141,4 +140,4 @@ function convertTocBlocks(ast) {
   ast.content.blocks = newBlocks;
 }
 
-module.exports = { normalizeToTag, TYPE_MAP, TAG_STYLE };
+module.exports = { normalizeToTag, TYPE_MAP };

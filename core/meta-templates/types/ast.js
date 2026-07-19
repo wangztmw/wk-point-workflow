@@ -242,4 +242,17 @@ module.exports = {
   // 校验
   validateSlide,
   validateBlock,
+
+  // tag 元数据（唯一真相源：样式默认值）
+  TAGS: {
+    h1: {fs:'32', color:'1a1a1a', bold:'true'},
+    h2: {fs:'24', color:'1a1a1a', bold:'true'},
+    h3: {fs:'18', color:'333333'},
+    h4: {fs:'15', color:'333333'},
+    p:  {fs:'13', color:'555555'},
+    list: {fs:'12', color:'444444'},
+    table: {fs:'11'},
+    img: {},
+    chart: {},
+  },
 };

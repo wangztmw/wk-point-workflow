@@ -7,15 +7,12 @@
  */
 
 function generate(params) {
-  const init      = require('./init');
-  const waterfall = require('./ppt-graph/waterfall');
-  const chart     = require('./ppt-graph/native-chart');
-  const tagexport = require('./base/tag-export');
-  const exportFn  = require('./export');
-
-  const engineUtils = `
-var textLines=function(t,w,f){if(!t||!w||!f)return 1;var c=Math.floor(w*96/(f*1.0));if(c<1)c=1;return Math.ceil(String(t).length/c);};
-`;
+  const init        = require('./init');
+  const waterfall   = require('./ppt-graph/waterfall');
+  const chart       = require('./ppt-graph/native-chart');
+  const engineUtils = require('./engine-utils');
+  const tagexport   = require('./base/tag-export');
+  const exportFn    = require('./export');
 
   let code = [init, waterfall, chart, engineUtils, tagexport, exportFn].join('\n');
 

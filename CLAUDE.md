@@ -97,14 +97,41 @@ node core/builder/assemble.js --watch <项目名>    # 监听
 node core/builder/assemble.js <项目名> --theme dark  # 换主题
 ```
 
-## 加新组件的流程
+## 加新组件 / 修改已有组件
+
+### 加新元素（如 callout 标注框）
 
 ```
-① meta-templates/types/ast.js     注册新的 block 类型和工厂函数
-② meta-templates/elements/xxx.js  写元素模板（流模式，只输出内容 HTML）
-③ render/blocks.js                bindXxx 函数（_html + _ppt 生成）
-④ parser/normalize.js             TYPE_MAP 或 TAG_STYLE（如需要默认样式）
+① meta-templates/types/ast.js       ← TAGS 加一行: callout: {fs:'14', color:'333333'}
+② meta-templates/elements/xxx.js    ← 写元素模板（流模式，只输出内容 HTML）
+③ layout/elements.js                ← 加 bindCallout + switch case
+④ parser/normalize.js               ← type→tag 映射 + fromDef（如 markdown 语法需新 block 类型）
 ```
+
+### 改已有元素的默认样式
+
+```
+① meta-templates/types/ast.js       ← 改 TAGS 里的 fs/color/bold（唯一入口）
+```
+
+### 改布局排列逻辑
+
+```
+① meta-templates/patterns/xxx.js    ← 改 arrange()（坐标计算）
+```
+
+### 加新布局类型
+
+```
+① meta-templates/patterns/xxx.js    ← 写新 pattern
+② layout/assemble.js                ← 加 if (t==='xxx') pattern.arrange()
+③ render/html-output.js             ← 加 renderXxx()
+④ parser/normalize.js               ← TYPE_MAP 加映射
+```
+
+### 真相源
+
+`meta-templates/types/ast.js` 的 `TAGS` 是 tag 默认样式的唯一入口。`parser/normalize.js`、`layout/style.js`、`layout/elements.js` 都从它读，不自己维护默认值。
 
 ## 关键约定
 

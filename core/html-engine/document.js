@@ -4,7 +4,7 @@
  * 拼接 CSS + slidesHTML + PPT 导出脚本 → 完整 HTML 文件。
  */
 
-const { DARK_SLIDE_TYPES } = require('../render/ppt-data');
+const { DARK_SLIDE_TYPES } = require('../render/ppt-output');
 
 /** 主题 CSS 变量 */
 function themeCSS(config) {

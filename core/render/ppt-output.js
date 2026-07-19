@@ -1,5 +1,5 @@
 /**
- * build-slide-data.js — 从渲染后的 AST 构建 SLIDE_DATA
+ * ppt-output.js — PPT 引擎适配层：ast._slideData 生成
  *
  * 在 renderBlocks 之后调用，从 blocks 上读取 _ppt + rect 拼成 PPT 引擎所需的纯数据。
  * 替代了旧的 ppt-extract.js（AST→SLIDE_DATA 投影规则）。

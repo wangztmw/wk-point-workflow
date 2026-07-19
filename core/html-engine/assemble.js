@@ -16,10 +16,10 @@ function render(slides, userConfig) {
   const config = mergeConfig(userConfig || {});
 
   // ① 布局预计算 + 统一渲染
-  const { applyLayout } = require('../layout/assemble');
+  const { process } = require('../layout/assemble');
   const { renderAll } = require('../render/assemble');
   for (const ast of slides) {
-    applyLayout(ast);
+    process(ast);
     renderAll(ast, config);
   }
 

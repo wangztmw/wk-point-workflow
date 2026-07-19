@@ -1,23 +1,17 @@
 /**
  * assemble.js — 渲染编排中心
  *
- * 串联 blocks → slides → ppt-data 三步，统一输出 ast._html + ast._slideData
+ * 只读 layout 已处理好的数据：_html → 包裹 HTML，_ppt → 收集 slideData
  */
 
-const { renderBlocks } = require('./blocks');
-const { renderSlide } = require('./slides');
-const { buildSlideData } = require('./ppt-data');
+const { renderSlide } = require('./html-output');
+const { buildSlideData } = require('./ppt-output');
 
 function renderAll(ast, config) {
-  var isLayout = ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split';
-
-  // ① blocks: _html + _ppt + rect
-  renderBlocks(ast.content.blocks, isLayout);
-
-  // ② slides: ast._html（最终 HTML 字符串）
+  // ① HTML: 读 block._html + block.pos.pixels → div 包裹
   renderSlide(ast, config);
 
-  // ③ ppt-data: ast._slideData（PPT 引擎用的 JSON）
+  // ② PPT: 读 block._ppt + block.pos.inches → slideData
   ast._slideData = buildSlideData(ast);
 }
 
