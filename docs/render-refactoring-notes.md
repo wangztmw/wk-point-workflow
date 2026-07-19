@@ -147,3 +147,43 @@ render/assemble.js → _html + _ppt + rect + ast._html + ast._slideData
 3. **死代码要及时清。** `fitChars`/`truncText` 是旧 ppt* 函数的遗物，无人调用但不删就占着导出不放。`styleToHtml` 在流模式下完全用不到，8 个元素模板各有一半代码是死分支。
 4. **两条路径统一是最大收益。** markdown→tag 后删了 23 个模板 + 3 个 registry 文件，维护负担大幅下降。
 5. **PPT 引擎的 chart 和 waterfall 无法走 executeBlock。** chart 需要 `pptx.charts.PIE`（原生 OOXML API），waterfall 需要形状拼凑。这是合理的特殊路径，不需要强行统一。
+
+---
+
+## Meta-Templates 架构详解
+
+### 结构（12 个 JS 文件）
+
+```
+meta-templates/
+├── types/
+│   └── ast.js                          ← SlideAST 工厂函数
+└── elements/
+    ├── shared/  escape.js  inline.js    ← 公共工具
+    ├── text/    heading.js  paragraph.js  list.js  page-title.js
+    ├── visual/  image.js  box.js
+    └── data/    table.js  chart-shell.js  waterfall.js
+```
+
+### 唯一入口：render/blocks.js
+
+所有 9 个元素模板只被 `render/blocks.js` 一个文件 import。每个 `bindXxx` 函数在流模式下调用元素模板生成 `block._html`，同时构建 `block._ppt` 描述符。
+
+### 元素模板的工作方式：流模式
+
+只输出纯内容 HTML（无外层定位 div），style 参数只传 font-size/color/bold/align，不传 x/y/w/h。
+
+### 加新组件的流程
+
+```
+① ast.js              注册 block 工厂函数
+② elements/xxx.js     写元素模板（流模式）
+③ render/blocks.js    加 bindXxx + switch case
+④ parser/normalize.js 加 TAG_STYLE 默认样式
+```
+
+### 布局的两层分工
+
+- layout/positions.js — 纯计算：每个 block 应该在哪个位置（英寸）
+- render/slides.js — HTML 包裹：英寸×96→px + div
+- PPT 端直接用 block.rect（英寸），不走 slides.js
