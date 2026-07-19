@@ -4,7 +4,7 @@
  * 拼接 CSS + slidesHTML + PPT 导出脚本 → 完整 HTML 文件。
  */
 
-const { buildSlideData, DARK_SLIDE_TYPES } = require('../render/build-slide-data');
+const { DARK_SLIDE_TYPES } = require('../render/ppt-data');
 
 /** 主题 CSS 变量 */
 function themeCSS(config) {
@@ -25,9 +25,9 @@ function themeCSS(config) {
   `;
 }
 
-/** AST → SLIDE_DATA JSON */
+/** 从 ast._slideData 读取（render/assemble.js 已生成） */
 function extractSlideData(slides) {
-  return slides.map(ast => buildSlideData(ast));
+  return slides.map(ast => ast._slideData || {});
 }
 
 /**

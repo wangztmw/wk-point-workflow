@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { IMAGE_SLIDE_TYPES } = require('../render/build-slide-data');
+const { IMAGE_SLIDE_TYPES } = require('../render/ppt-data');
 
 /**
  * 解析 slide 的图片：对 image-* 类型扫描 images/<label>/ 子文件夹

@@ -16,13 +16,11 @@ function render(slides, userConfig) {
   const config = mergeConfig(userConfig || {});
 
   // ① 布局预计算 + 统一渲染
-  const { applyLayout } = require('../render/layout/layout-engine');
-  const { renderBlocks, renderSlide } = require('../render/render');
+  const { applyLayout } = require('../layout/assemble');
+  const { renderAll } = require('../render/assemble');
   for (const ast of slides) {
     applyLayout(ast);
-    var isLayout = ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split';
-    renderBlocks(ast.content.blocks, isLayout);
-    renderSlide(ast, config);
+    renderAll(ast, config);
   }
 
   // ② 图片文件夹解析
