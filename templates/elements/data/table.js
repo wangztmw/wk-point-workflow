@@ -7,10 +7,7 @@ const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(headers, rows, style) {
   const s = style || {};
-  const pos = styleToHtml(s);
   const fs = s['font-size'] || 13;
-  const variant = s.variant || 'premium';
-
   if (!headers || headers.length === 0) return '';
 
   // 三线表：顶线3px + 表头下线2px + 底线3px，隔行换色
@@ -25,12 +22,15 @@ function render(headers, rows, style) {
     ).join('')}</tr>`;
   }).join('');
 
-  return `<div style="${pos};overflow:auto;">
-    <table style="width:100%;border-collapse:collapse;font-family:inherit;border-top:3px solid #1a1a1a;border-bottom:3px solid #1a1a1a;">
-      <thead><tr>${headerHTML}</tr></thead>
-      <tbody>${dataHTML}</tbody>
-    </table>
-  </div>`;
+  const tableHTML = `<table style="width:100%;border-collapse:collapse;font-family:inherit;border-top:3px solid #1a1a1a;border-bottom:3px solid #1a1a1a;">
+    <thead><tr>${headerHTML}</tr></thead>
+    <tbody>${dataHTML}</tbody>
+  </table>`;
+
+  const hasPos = s.x !== undefined || s.y !== undefined || s.w !== undefined || s.h !== undefined;
+  if (!hasPos) return tableHTML;
+  const pos = styleToHtml(s);
+  return `<div style="${pos};overflow:auto;">${tableHTML}</div>`;
 }
 
 module.exports = { render };

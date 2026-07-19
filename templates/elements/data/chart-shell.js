@@ -9,13 +9,10 @@ const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(chartId, option, style) {
   const s = style || {};
-  const pos = styleToHtml(s);
   const optJSON = JSON.stringify(option).replace(/<\//g, '<\\/');
+  const hasPos = s.x !== undefined || s.y !== undefined || s.w !== undefined || s.h !== undefined;
 
-  return `<div style="${pos};">
-    <div style="position:absolute;top:4px;right:8px;background:#2ecc71;color:#fff;font-size:10px;padding:2px 10px;z-index:5;font-weight:600;">SVG矢量</div>
-    <div id="${esc(chartId)}" style="width:100%;height:100%;"></div>
-  </div>
+  const chartHTML = `<div id="${esc(chartId)}" style="width:100%;height:100%;"></div>
 <script>
 (function(){
   var dom=document.getElementById('${esc(chartId)}');
@@ -25,6 +22,13 @@ function render(chartId, option, style) {
   new ResizeObserver(function(){chart.resize();}).observe(dom);
 })();
 <\/script>`;
+
+  if (!hasPos) return chartHTML;
+  const pos = styleToHtml(s);
+  return `<div style="${pos};">
+    <div style="position:absolute;top:4px;right:8px;background:#2ecc71;color:#fff;font-size:10px;padding:2px 10px;z-index:5;font-weight:600;">SVG矢量</div>
+    ${chartHTML}
+  </div>`;
 }
 
 function renderFallback(title) {

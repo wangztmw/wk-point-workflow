@@ -34,34 +34,7 @@ const DEFAULT_CONFIG = {
   },
 };
 
-// 模板路由：从 types/html-registry.js 读取映射，拼接绝对路径
-const { TEMPLATE_MAP } = require('../types/html-registry');
-const TEMPLATE_REGISTRY = {};
-for (const [type, tplPath] of Object.entries(TEMPLATE_MAP)) {
-  TEMPLATE_REGISTRY[type] = path.resolve(__dirname, '..', '..', 'templates', tplPath);
-}
-
-/**
- * 根据 slide AST 解析实际使用的模板名
- * chart 类型会根据 props.chartType 进一步细分
- */
-function resolveTemplateName(ast) {
-  // 标签语法：布局类型走自己的模板（CSS流式），其余走通用绝对定位渲染器
-  if (ast.parser === 'tag') {
-    if (ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split') {
-      return ast.type;
-    }
-    return 'tag-slide';
-  }
-
-  if (ast.type === 'chart') {
-    const ct = (ast.props.chartType || ast.props.type || 'bar').toLowerCase();
-    // 映射到具体的 chart-* 模板
-    const mapped = 'chart-' + ct;
-    if (TEMPLATE_REGISTRY[mapped]) return mapped;
-  }
-  return ast.type;
-}
+// 模板路由已移至 core/render/render.js — HTML 引擎不再管理模板
 
 /**
  * 渲染完整 HTML 文档
@@ -72,22 +45,17 @@ function resolveTemplateName(ast) {
 function render(slides, userConfig) {
   const config = mergeConfig(userConfig || {});
 
-  // 加载模板
-  const templates = loadTemplates();
-
-  // 读取 base.css
-  const baseCSS = loadBaseCSS();
-
-  // 生成自定义 CSS 变量
+  // 生成主题 CSS 变量
   const customCSS = generateThemeCSS(config);
 
-  // 布局预计算 + 统一渲染：给所有 block 生成 _html + _ppt + rect
+  // 布局预计算 + 统一渲染：给所有 block 生成 _html + _ppt + rect，再生成 slide 最终 HTML
   const { applyLayout } = require('../render/layout/layout-engine');
-  const { renderBlocks } = require('../render/render');
+  const { renderBlocks, renderSlide } = require('../render/render');
   for (const ast of slides) {
     applyLayout(ast);
     var isLayout = ast.type === 'stack' || ast.type === 'grid' || ast.type === 'split';
     renderBlocks(ast.content.blocks, isLayout);
+    renderSlide(ast, config);
   }
 
   // 图片文件夹解析：对 image-* 类型，从 images/<label>/ 子文件夹读取图片
@@ -96,12 +64,8 @@ function render(slides, userConfig) {
     resolveImageFromFolders(ast, projectDir);
   }
 
-  // 渲染每页幻灯片
-  const slidesHTML = slides.map((ast) => {
-    const tplName = resolveTemplateName(ast);
-    const template = templates[tplName] || templates['content'];
-    return template.render(ast, config);
-  }).join('\n');
+  // HTML 引擎只拼装已预渲染的 _html 字符串
+  const slidesHTML = slides.map(ast => ast._html || '').join('\n');
 
   // 提取全部幻灯片结构数据（供浏览器端导出，图表+布局都需要）
   const slideData = extractAllSlideData(slides, config);
@@ -109,7 +73,6 @@ function render(slides, userConfig) {
   // 组装完整文档
   return buildDocument({
     title: config.title,
-    baseCSS,
     customCSS,
     slidesHTML,
     config,
@@ -149,9 +112,8 @@ function resolveImageFromFolders(ast, projectDir) {
     resolveTagImages(ast, projectDir);
     return;
   }
-  const { IMAGE_SLIDE_TYPES } = require('../types/ppt-extract');
-  const imageTypes = IMAGE_SLIDE_TYPES;
-  if (!projectDir || !imageTypes.includes(ast.type)) return;
+  const { IMAGE_SLIDE_TYPES } = require('../render/build-slide-data');
+  if (!projectDir || !IMAGE_SLIDE_TYPES.includes(ast.type)) return;
 
   const imagesDir = path.join(projectDir, 'images');
   if (!fs.existsSync(imagesDir)) return;
@@ -238,30 +200,6 @@ function resolveTagImages(ast, projectDir) {
   }
 }
 
-function loadTemplates() {
-  const templates = {};
-  const coreDir = __dirname;
-
-  for (const [type, filePath] of Object.entries(TEMPLATE_REGISTRY)) {
-    try {
-      const full = path.resolve(coreDir, filePath);
-      templates[type] = require(full);
-    } catch (err) {
-      console.warn(`   ⚠ 模板 "${type}" 加载失败: ${err.message}，使用 content 回退`);
-      templates[type] = templates['content'];
-    }
-  }
-  return templates;
-}
-
-function loadBaseCSS() {
-  try {
-    return fs.readFileSync(path.join(__dirname, '..', '..', 'templates', 'base.css'), 'utf-8');
-  } catch {
-    return '/* base.css not found */';
-  }
-}
-
 function generateThemeCSS(config) {
   const t = config.theme;
   return `
@@ -284,34 +222,15 @@ function generateThemeCSS(config) {
  * 从 SlideAST 数组中提取图表数据
  * 供浏览器端 PptxGenJS 原生图表导出使用
  */
-// 从 types/ppt-extract 导入（唯一真相源）
-const { cleanMD, toRuns } = require('../types/ppt-extract');
+// 从 render/build-slide-data 导入
+const { cleanMD, buildSlideData } = require('../render/build-slide-data');
+const { DARK_SLIDE_TYPES } = require('../render/build-slide-data');
 
 function extractAllSlideData(slides, config) {
-  const { PROJECTION } = require('../types/ppt-extract');
-  const all = [];
-
-  for (const ast of slides) {
-    const base = {
-      index: ast.index,
-      type: ast.type,
-      title: cleanMD(ast.props.title || (ast.content.headings[0]?.text || '')),
-    };
-
-    // 标签语法：tag project 内部处理
-    const key = ast.parser === 'tag' ? 'tag' : ast.type;
-    const project = PROJECTION[key];
-    if (project) {
-      all.push({ ...base, ...project(ast) });
-    } else {
-      all.push(base);
-    }
-  }
-
-  return all;
+  return slides.map(ast => buildSlideData(ast));
 }
 
-function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCount, slideData }) {
+function buildDocument({ title, customCSS, slidesHTML, config, slideCount, slideData }) {
   const chartSlides = slideData.filter(s => s.type === 'chart');
   const chartDataJSON = JSON.stringify(chartSlides);
   const slideDataJSON = JSON.stringify(slideData);
@@ -321,7 +240,6 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
   );
 
   const { generate: generatePptScript } = require('../ppt-engine/ppt-engine-assemble');
-  const { DARK_SLIDE_TYPES } = require('../types/ppt-extract');
   const pptScript = generatePptScript({
     slideDataJSON, chartDataJSON, colorsJSON,
     backgroundJSON: config.background ? JSON.stringify(config.background) : 'null',
@@ -342,8 +260,32 @@ function buildDocument({ title, baseCSS, customCSS, slidesHTML, config, slideCou
 <!-- ECharts CDN -->
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <style>
-/* ===== 基础样式 ===== */
-${baseCSS}
+/* ===== 全局样式 ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f0f0eb;color:#1a1a1a;display:flex;flex-direction:column;align-items:center;padding:24px 20px 60px;min-height:100vh}
+
+/* ===== 工具栏 ===== */
+.toolbar{position:sticky;top:0;z-index:100;background:#fff;padding:12px 24px;margin-bottom:28px;display:flex;gap:10px;align-items:center;box-shadow:0 1px 0 #e8e8ec,0 4px 12px rgba(0,0,0,0.04);flex-wrap:wrap;justify-content:center;width:100%;max-width:1000px}
+.toolbar h1{font-size:15px;font-weight:600;margin-right:8px;white-space:nowrap;color:#1a1a1a}
+.toolbar .btn{padding:8px 16px;border:1px solid #e8e8ec;border-radius:0;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#555;font-family:inherit}
+.toolbar .btn:hover{background:#f5f5f5;border-color:#ccc}
+.toolbar .btn-primary{background:#4f5fd9;color:#fff;border-color:#4f5fd9}
+.toolbar .btn-primary:hover{background:#3d4dc0}
+.toolbar .btn-success{background:#2ecc71;color:#fff;border-color:#2ecc71}
+.toolbar .status{font-size:12px;color:#888;margin-left:4px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===== 幻灯片容器 ===== */
+.slides-wrapper{display:flex;flex-direction:column;gap:36px;width:100%;max-width:1000px}
+.slide{width:var(--slide-width);height:var(--slide-height);position:relative;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.08);background:var(--color-bg);flex-shrink:0;border-left:3px solid transparent}
+.slide:hover{border-left-color:var(--color-primary);transition:border-left-color .3s}
+@media(max-width:1000px){.slide{width:90vw;height:calc(90vw * .5625)}}
+
+/* ===== 加载遮罩 ===== */
+.loading-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(255,255,255,0.85);justify-content:center;align-items:center}
+.loading-overlay.active{display:flex}
+.loading-box{background:#fff;padding:28px 44px;text-align:center;box-shadow:0 2px 24px rgba(0,0,0,0.1)}
+.spinner{width:36px;height:36px;border:2px solid #e8e8ec;border-top-color:#4f5fd9;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* ===== 主题 CSS 变量 ===== */
 ${customCSS}

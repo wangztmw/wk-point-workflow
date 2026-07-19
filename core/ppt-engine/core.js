@@ -72,29 +72,14 @@ function buildPptxFromSlideData() {
   pptx.defineLayout({ name: 'C16x9', width: 10, height: 5.625 });
   pptx.layout = 'C16x9';
   SLIDE_DATA.forEach(function(s) {
-    if (s.parser === 'tag')           { addTagSlidePptx(pptx, s); return; }
-    if (s.type === 'title')           addTitleSlidePptx(pptx, s);
-    else if (s.type === 'content')    addContentSlidePptx(pptx, s);
-    else if (s.type === 'summary')    addSummarySlidePptx(pptx, s);
-    else if (s.type === 'two-column') addTwoColumnSlidePptx(pptx, s);
-    else if (s.type === 'toc')        addTocSlidePptx(pptx, s);
-    else if (s.type === 'section')    addSectionSlidePptx(pptx, s);
-    else if (s.type === 'table')      addTableSlidePptx(pptx, s);
-    else if (s.type === 'ending')     addEndingSlidePptx(pptx, s);
-    else if (s.type === 'quote')      addQuoteSlidePptx(pptx, s);
-    else if (s.type === 'three-column') addThreeColSlidePptx(pptx, s);
-    else if (s.type === 'kpi-grid')     addKpiGridSlidePptx(pptx, s);
-    else if (s.type === 'image-text')   addImageTextSlidePptx(pptx, s);
-    else if (s.type === 'image-full')   addImageFullSlidePptx(pptx, s);
-    else if (s.type === 'image-gallery') addImageGallerySlidePptx(pptx, s);
-    else if (s.type === 'image-grid')   addImageGridSlidePptx(pptx, s);
-    else if (s.type === 'timeline')     addTimelineSlidePptx(pptx, s);
-    else if (s.type === 'chart') {
+    // Chart 保留原生 OOXML 路径
+    if (s.type === 'chart') {
       if (isWaterfallType(s.chartType)) addWaterfallShapes(pptx, s);
       else addNativeChartSlide(pptx, s);
+      return;
     }
-    else addFallbackSlidePptx(pptx, s);
-    // 背景由各渲染函数内部控制 drawBackgroundShapes
+    // 其他所有 slide 统一走 executeBlock
+    addTagSlidePptx(pptx, s);
   });
   return pptx;
 }
