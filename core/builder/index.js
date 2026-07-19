@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parse, parseTag, detectTagSyntax } = require('../parser');
-const { render } = require('../html-engine');
+const { render } = require('../html-engine/assemble');
 
 const PROJECTS_DIR = path.join(__dirname, '..', '..', 'projects');
 const DEFAULT_PROJECT = 'demo-1';
@@ -284,7 +284,7 @@ function deepMerge(target, source) {
 // ============================================================
 
 async function generateStyleguide(name, themePreset) {
-  const { render } = require('../html-engine');
+  const { render } = require('../html-engine/assemble');
   const samples = require('./styleguide-data');
 
   // 加 index

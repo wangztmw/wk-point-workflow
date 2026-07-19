@@ -9,7 +9,7 @@
  */
 
 const parser = require('./parser');
-const htmlEngine = require('./html-engine');
+const htmlEngine = require('./html-engine/assemble');
 
 module.exports = {
   parse: parser.parse,
