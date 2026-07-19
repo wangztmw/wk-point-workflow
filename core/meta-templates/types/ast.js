@@ -243,16 +243,41 @@ module.exports = {
   validateSlide,
   validateBlock,
 
-  // tag 元数据（唯一真相源：样式默认值）
+  // tag 元数据（唯一真相源）
   TAGS: {
-    h1: {fs:'32', color:'1a1a1a', bold:'true'},
-    h2: {fs:'24', color:'1a1a1a', bold:'true'},
-    h3: {fs:'18', color:'333333'},
-    h4: {fs:'15', color:'333333'},
-    p:  {fs:'13', color:'555555'},
-    list: {fs:'12', color:'444444'},
+    h1:    {fs:'32', color:'1a1a1a', bold:'true'},
+    h2:    {fs:'24', color:'1a1a1a', bold:'true'},
+    h3:    {fs:'18', color:'333333'},
+    h4:    {fs:'15', color:'333333'},
+    p:     {fs:'13', color:'555555'},
+    list:  {fs:'12', color:'444444'},
     table: {fs:'11'},
-    img: {},
-    chart: {},
+    img:   {},
+    chart:  {},
+    box:   {},
+    callout: {fs:'14'},
+  },
+
+  // 布局类型定义（pattern + 渲染方式）
+  LAYOUTS: {
+    stack: {pattern:'stack', output:'layout'},
+    grid:  {pattern:'grid',  output:'layout'},
+    split: {pattern:'split', output:'layout'},
+    title: {output:'tag'},
+    section: {output:'tag'},
+    ending: {output:'tag'},
+    'tag-slide': {output:'tag'},
+    chart: {output:'chart'},
+    masonry: {pattern:'masonry', output:'layout'},
+  },
+
+  // markdown slide type → tag 布局类型
+  MARKDOWN_MAP: {
+    content:'stack', summary:'grid', 'two-column':'split', 'three-column':'split',
+    toc:'stack', 'kpi-grid':'grid', table:'stack',
+    title:'title', section:'section', ending:'ending', quote:'tag-slide',
+    chart:'chart', timeline:'tag-slide',
+    'image-gallery':'tag-slide', 'image-grid':'tag-slide',
+    'image-text':'tag-slide', 'image-full':'tag-slide',
   },
 };

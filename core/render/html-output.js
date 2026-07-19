@@ -4,10 +4,13 @@
  * pageTitle 由 layout/assemble.js 预渲染到 ast._titleHTML。
  */
 
+var AST = require('../meta-templates/types/ast');
+var LAYOUTS = AST.LAYOUTS;
+
 function renderSlide(ast, config) {
-  var type = ast.type;
-  if (type === 'stack' || type === 'grid' || type === 'split') {
-    ast._html = renderLayoutSlide(ast, type);
+  var def = LAYOUTS[ast.type] || {};
+  if (def.output === 'layout') {
+    ast._html = renderLayout(ast.content.blocks || [], ast._titleHTML || '');
   } else {
     ast._html = renderTagSlide(ast);
   }
@@ -15,37 +18,7 @@ function renderSlide(ast, config) {
 
 // ── 布局 slide：绝对定位包裹 ──
 
-function renderLayoutSlide(ast, type) {
-  var blocks = ast.content.blocks || [], titleHTML = ast._titleHTML || '';
-  if (type === 'stack') return renderStack(blocks, titleHTML);
-  if (type === 'split') return renderSplit(blocks, titleHTML);
-  if (type === 'grid')  return renderGrid(blocks, titleHTML);
-  return '';
-}
-
-function renderStack(blocks, titleHTML) {
-  var parts = blocks.filter(function(b) { return !b._skip && b.pos; }).map(function(b) {
-    var p = b.pos.pixels;
-    return '<div style=\"position:absolute;left:' + p.x + 'px;top:' + p.y + 'px;width:' + p.w + 'px;height:' + p.h + 'px;overflow:hidden;\">'
-      + (b._html || '') + '</div>';
-  }).join('\n');
-
-  return '<div class=\"slide\" style=\"background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;\">'
-    + titleHTML + parts + '</div>';
-}
-
-function renderSplit(blocks, titleHTML) {
-  var parts = blocks.filter(function(b) { return !b._skip && b.pos; }).map(function(b) {
-    var p = b.pos.pixels;
-    return '<div style=\"position:absolute;left:' + p.x + 'px;top:' + p.y + 'px;width:' + p.w + 'px;height:' + p.h + 'px;overflow:hidden;\">'
-      + (b._html || '') + '</div>';
-  }).join('\n');
-
-  return '<div class=\"slide\" style=\"background:var(--color-bg);position:relative;width:960px;height:540px;overflow:hidden;\">'
-    + titleHTML + parts + '</div>';
-}
-
-function renderGrid(blocks, titleHTML) {
+function renderLayout(blocks, titleHTML) {
   var parts = blocks.filter(function(b) { return !b._skip && b.pos; }).map(function(b) {
     var p = b.pos.pixels;
     return '<div style=\"position:absolute;left:' + p.x + 'px;top:' + p.y + 'px;width:' + p.w + 'px;height:' + p.h + 'px;overflow:hidden;\">'

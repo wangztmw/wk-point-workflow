@@ -5,7 +5,7 @@
  * 写入 block.pos = { inches, pixels }。
  */
 
-const { blockHeight } = require('../../layout/height');
+const { blockHeight } = require('../../../layout/height');
 
 function arrange(blocks, box) {
   var b = box || {};

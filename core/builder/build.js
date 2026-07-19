@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parse, parseTag, detectTagSyntax } = require('../parser/assemble');
+const { parse } = require('../parser/assemble');
 const { render } = require('../html-engine/assemble');
 const { PROJECTS_DIR, THEME_PRESETS, deepMerge } = require('./config');
 
@@ -32,9 +32,8 @@ async function buildProject(name, themePreset) {
   config.projectDir = projectDir;
   if (themePreset && THEME_PRESETS[themePreset]) { config = deepMerge(config, THEME_PRESETS[themePreset]); console.log(`   🎨 应用主题: ${themePreset}`); }
 
-  const useTag = detectTagSyntax(md);
-  const slides = useTag ? parseTag(md) : parse(md);
-  console.log(`   📊 解析完成: ${slides.length} 页幻灯片 (${useTag ? 'tag' : 'markdown'} 语法)`);
+  const slides = parse(md);
+  console.log(`   📊 解析完成: ${slides.length} 页幻灯片`);
   const typeCount = {};
   slides.forEach(s => { typeCount[s.type] = (typeCount[s.type] || 0) + 1; console.log(`      [${s.index + 1}] ${s.type.padEnd(10)} ${(s.props.title || '').substring(0, 40)}`); });
   console.log(`   类型分布: ${Object.entries(typeCount).map(([k, v]) => `${k}×${v}`).join(', ')}`);
