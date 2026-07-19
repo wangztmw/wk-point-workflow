@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parse, parseTag, detectTagSyntax } = require('../parser');
+const { parse, parseTag, detectTagSyntax } = require('../parser/assemble');
 const { render } = require('../html-engine/assemble');
 
 const PROJECTS_DIR = path.join(__dirname, '..', '..', 'projects');

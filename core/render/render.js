@@ -9,14 +9,14 @@
  * HTML/PPT 引擎不再需要查 REGISTRY 或调元素模板。
  */
 
-const heading   = require('../../templates/elements/text/heading');
-const paragraph = require('../../templates/elements/text/paragraph');
-const list      = require('../../templates/elements/text/list');
-const image     = require('../../templates/elements/visual/image');
-const box       = require('../../templates/elements/visual/box');
-const tableEl   = require('../../templates/elements/data/table');
-const waterfall = require('../../templates/elements/data/waterfall');
-const chartShell = require('../../templates/elements/data/chart-shell');
+const heading   = require('../meta-templates/elements/text/heading');
+const paragraph = require('../meta-templates/elements/text/paragraph');
+const list      = require('../meta-templates/elements/text/list');
+const image     = require('../meta-templates/elements/visual/image');
+const box       = require('../meta-templates/elements/visual/box');
+const tableEl   = require('../meta-templates/elements/data/table');
+const waterfall = require('../meta-templates/elements/data/waterfall');
+const chartShell = require('../meta-templates/elements/data/chart-shell');
 
 function pxToIn(px) { return (Number(px) || 0) / 96; }
 
@@ -286,7 +286,7 @@ function bindChart(block, data, st) {
 // Slide 级渲染：生成 ast._html（最终 HTML 字符串）
 // ============================================================
 
-const pageTitle = require('../../templates/elements/text/page-title');
+const pageTitle = require('../meta-templates/elements/text/page-title');
 
 /**
  * 为 slide 生成最终 HTML 字符串，存入 ast._html。

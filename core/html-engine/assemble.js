@@ -2,7 +2,7 @@
  * assemble.js — HTML 输出编排中心
  *
  * 调度 render → images → document 三个模块，组装最终 HTML。
- * 对应 ppt-engine/ppt-engine-assemble.js 的角色。
+ * 对应 ppt-engine/assemble.js 的角色。
  */
 
 const { mergeConfig } = require('./config');

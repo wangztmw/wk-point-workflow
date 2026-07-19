@@ -1,10 +1,5 @@
-/**
- * list.js — 列表元素
- * render(items, ordered, style) → <ul>/<ol>
- */
 const { esc } = require('../shared/escape');
 const { renderInline } = require('../shared/inline');
-const { styleToHtml } = require('../../../core/utils/coordinates');
 
 function render(items, ordered, style) {
   const s = style || {};
@@ -18,16 +13,7 @@ function render(items, ordered, style) {
     return `<li style="font-size:${fs}px;color:#${s.color||'444444'};line-height:1.7;">${inner}</li>`;
   }).join('');
 
-  const hasPos = s.x !== undefined || s.y !== undefined || s.w !== undefined || s.h !== undefined;
-  if (!hasPos) {
-    // 流模式：无坐标时跳过外层定位 div
-    return `<${tag} style="margin:0;padding-left:${ordered?24:18}px;">${itemsHTML}</${tag}>`;
-  }
-  const pos = styleToHtml(s);
-  const pad = s.padding || '0';
-  return `<div style="${pos};padding:${pad}px;overflow-y:auto;">
-    <${tag} style="margin:0;padding-left:${ordered?24:18}px;">${itemsHTML}</${tag}>
-  </div>`;
+  return `<${tag} style="margin:0;padding-left:${ordered?24:18}px;">${itemsHTML}</${tag}>`;
 }
 
 module.exports = { render };

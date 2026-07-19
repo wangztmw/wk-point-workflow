@@ -7,21 +7,17 @@
  */
 
 function generate(params) {
-  // 按顺序加载各模块的函数代码
-  const core    = require('./core');
-  const waterfall = require('./waterfall');
-  const chart   = require('./native-chart');
-  const text    = require('./text-layout');
-  const table   = require('./table');
-  const image   = require('./image');
-  const tagexport = require('./tag-export');
+  const init      = require('./init');
+  const waterfall = require('./ppt-graph/waterfall');
+  const chart     = require('./ppt-graph/native-chart');
+  const tagexport = require('./base/tag-export');
+  const exportFn  = require('./export');
 
-  // 浏览器端工具函数（executeBlock 的 addListItems 需要 textLines）
   const engineUtils = `
 var textLines=function(t,w,f){if(!t||!w||!f)return 1;var c=Math.floor(w*96/(f*1.0));if(c<1)c=1;return Math.ceil(String(t).length/c);};
 `;
 
-  let code = [core, waterfall, chart, text, table, image, engineUtils, tagexport].join('\n');
+  let code = [init, waterfall, chart, engineUtils, tagexport, exportFn].join('\n');
 
   // 占位符替换
   code = code.replace(/__SLIDE_DATA__/g, params.slideDataJSON);

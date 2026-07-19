@@ -8,7 +8,7 @@
  * styler/       背景提取模块
  */
 
-const parser = require('./parser');
+const parser = require('./parser/assemble');
 const htmlEngine = require('./html-engine/assemble');
 
 module.exports = {

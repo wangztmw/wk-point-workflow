@@ -8,7 +8,7 @@
  *   直到下一个标签或 slide 边界。
  */
 
-const AST = require('../types/ast');
+const AST = require('../meta-templates/types/ast');
 
 // 复用旧解析器的 splitSlides（复制，避免循环依赖）
 function splitSlides(md) {

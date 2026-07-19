@@ -39,7 +39,7 @@ function buildDocument({ title, slidesHTML, slides, config }) {
   const chartSlides = slideData.filter(s => s.type === 'chart');
   const customCSS = themeCSS(config);
 
-  const { generate: generatePptScript } = require('../ppt-engine/ppt-engine-assemble');
+  const { generate: generatePptScript } = require('../ppt-engine/assemble');
   const pptScript = generatePptScript({
     slideDataJSON: JSON.stringify(slideData),
     chartDataJSON: JSON.stringify(chartSlides),
@@ -105,7 +105,7 @@ ${config.background && config.background.backgroundImage ? `
   <h1>📊 ${esc(title)}</h1>
   <span style="font-size:12px;color:#8899aa;">${slideCount} 页</span>
   <span style="flex:1;"></span>
-  <button class="btn btn-primary" onclick="exportDomToPptx()">⬇ 导出 PPTX</button>
+  <button class="btn btn-primary" onclick="exportPPTX()">⬇ 导出 PPTX</button>
   <span class="status" id="status"></span>
 </div>
 
@@ -121,7 +121,6 @@ ${slidesHTML}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/dom-to-pptx@1.1.5/dist/dom-to-pptx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
 ${pptScript}
