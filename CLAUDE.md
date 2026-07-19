@@ -127,3 +127,18 @@ node core/builder/assemble.js <项目名> --theme dark  # 换主题
 - PptxGenJS border 只认数组 `[上,右,下,左]`
 - `addImage` 必须 try/catch 包裹
 - 瀑布图是形状拼的，不是原生图表
+
+## 文档索引
+
+| 文件 | 作用 |
+|------|------|
+| `CLAUDE.md` | 项目总览+架构说明（本文件） |
+| `README.md` | 项目介绍 |
+| `docs/data-flow.md` | 完整数据流图——Markdown 到 PPT 的每一步转换 |
+| `docs/knowledge.md` | 历史踩坑记录（1061行） |
+| `docs/roadmap.md` | 项目路线图 |
+| `docs/markdown-syntax.md` | content.md 写法规范（所有 slide 类型语法） |
+| `docs/schema.md` | 数据结构说明（SlideAST / SLIDE_DATA） |
+| `docs/slide-data.md` | SLIDE_DATA JSON 格式定义 |
+| `docs/template-dev.md` | 模板开发指南（已过时，供参考） |
+| `docs/render-refactoring-notes.md` | Render 重构全记录：6轮迭代，踩坑与经验 |
